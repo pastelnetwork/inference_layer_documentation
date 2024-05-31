@@ -959,7 +959,7 @@ which sends back the filtered model menu after removing any entries in the maste
 
 To really understand how the `model_menu.json`  file works and its importance in the wider system, we need to go into a lot more detail. For starters, here is what the beginning of this file looks like:
 
-```js
+```JSON
     {
       "models": [
         {
@@ -1053,7 +1053,7 @@ To really understand how the `model_menu.json`  file works and its importance in
 ```
 Compare the above entry for a “locally hosted” Swiss Army Llama based LLM to the entry below for an API service based model, which has fewer options to specify and which uses a very different approach to calculating the cost of a specific inference request (the API service based models try to estimate the actual cost to the Supernode operator of making that particular inference request, whereas the Swiss Army Llama based models instead try to quantify the compute/memory usage of a particular inference request):
 
-```js
+```JSON
         {
           "model_name": "openai-gpt-4o",
           "model_url": "",
@@ -1106,7 +1106,7 @@ Compare the above entry for a “locally hosted” Swiss Army Llama based LLM to
 
 Or for an image generation (“text_to_image” inference type) model’s entry, which specifies wildly different input parameters and output type (a binary image encoded as base64 text rather than a plain text output like you would get from an LLM model doing a text_completion inference request):
 
-```js
+```JSON
      {
           "model_name": "stability-core",
           "model_url": "",
