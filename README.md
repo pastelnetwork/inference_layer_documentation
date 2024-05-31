@@ -40,9 +40,7 @@ We explain above the main parts of the system, but not much about how they are a
 
 - Users never spend money (in the form of either PSL or in Inference Credits) irreversibly but then don’t properly get the thing they paid for— either a new credit pack ticket that works, or the results of their inference request.
 
-
 - Because obligations arising from the Inference Layer are “network wide” and thus shared by all Supernodes, this makes it a lot easier in theory to deal with problems. Even if a particular Supernode doesn’t follow through with what it is supposed to do for any reason (e.g., it’s being malicious, or it experienced technical issues like running out of disk space or poor network connectivity), then we want the other Supernodes to automatically realize that and have a robust process for automatically having the next Supernode step up to complete what the user has already paid for.
-
 
 - We want to have confidence that each part of the complex processes involved in creating a new credit pack ticket or in creating and fulfilling a new inference request is 100% valid and correct and hasn’t been changed by any malicious parties, including the end user, the responding Supernode, or another Supernode, or even a “man in the middle”, like one of the ISPs involved in the process for the end user or the Supernodes. 
     - This means that each step in these processes is mediated by messages, and the messages are verified and validated in very particular ways. For example, the relevant fields of each message are combined in a repeatable way and hashed together, and this hash included in the message “envelope”; these message hashes are then signed by all parties involved using their PastelID private keys. This allows all parties to know for sure that the contents of the message hasn’t been altered in any way, because otherwise the hash wouldn’t match the hash that each party independently computes based on all the relevant message fields, and thus the signatures wouldn’t validate either. 
@@ -61,9 +59,7 @@ We explain above the main parts of the system, but not much about how they are a
 
 With those preliminaries out of the way, we can now get into the specifics of the implementations of both parts. We begin with the creation of credit pack tickets.
 
-
 ----------
-
 
 ## Credit Pack Ticket Implementation Details
 
@@ -378,9 +374,9 @@ Next, we go into the various service functions for validating existing credit pa
 
 This is what gives us the flexibility and power to dynamically revise the credit pack ticket fields/structure (which is also facilitated by the inclusion of a “message_version_string” in nearly every message, so we can deal with changes in a robust way to the inference protocol) and also to create completely new kinds of `contract` tickets for new applications (e.g., some kind of generic “smart contract” application that can run little WASM containers, similar to AWS Lambda functions). But it also means that all of the detailed level validation of the credit pack ticket data itself needs to be done by us in the Inference Layer server code in Python.
 
-That’s no problem though— it’s easy enough to validate a credit pack ticket in Python. We just need to get the ticket data from the blockchain, parse out the component messages, and run them through the same validation process that we apply when the Supernode receives a message via a REST endpoint. In fact, we should review that function, because it’s quite long and intricate, because we use the same validation function to check ALL the various kinds of messages that are sent around during the process of creating a new credit pack (in fact, we also reuse this same function for inference request message validation). You can read the entire code for the function here:
+That’s no problem though— it’s easy enough to validate a credit pack ticket in Python. We just need to get the ticket data from the blockchain, parse out the component messages, and run them through the same validation process that we apply when the Supernode receives a message via a REST endpoint. In fact, we should review that function, because it’s quite long and intricate, because we use the same validation function to check ALL the various kinds of messages that are sent around during the process of creating a new credit pack (in fact, we also reuse this same function for inference request message validation). You can read the entire code for the function [here](https://github.com/pastelnetwork/python_inference_layer_server/blob/4176bb6e3e52cdeb6e3c61f291b2944e800b764f/service_functions.py#L5885).
 
-https://github.com/pastelnetwork/python_inference_layer_server/blob/4176bb6e3e52cdeb6e3c61f291b2944e800b764f/service_functions.py#L5885
+
 
 
 Below is a detailed explanation in words of how the function works:
@@ -441,9 +437,7 @@ In addition to the main validation function, several helper functions support th
     - This asynchronous function validates the hashes of the response fields in a SQLModel instance. It compares the expected hash (computed from the response fields) with the actual hash stored in the model instance. If the hashes don't match, it appends an error to the `validation_errors` list.
     
 
-Now we can also look at the full function for validating an existing credit pack ticket (`validate_existing_credit_pack_ticket`); the code for this function can be found here:
-
-https://github.com/pastelnetwork/python_inference_layer_server/blob/4176bb6e3e52cdeb6e3c61f291b2944e800b764f/service_functions.py#L2969
+Now we can also look at the full function for validating an existing credit pack ticket (`validate_existing_credit_pack_ticket`); the code for this function can be found [here](https://github.com/pastelnetwork/python_inference_layer_server/blob/4176bb6e3e52cdeb6e3c61f291b2944e800b764f/service_functions.py#L2969).
 
 
 And a detailed explanation of how it works in words is below:
@@ -479,11 +473,7 @@ The `validate_existing_credit_pack_ticket` function is an asynchronous function 
 
 This function ensures the integrity and validity of an existing Pastel credit pack ticket by performing comprehensive validations, including payment validation, supernode validation, hash validation, signature validation, and agreeing supernodes validation. By checking against historical data and verifying the consistency of the ticket data, the function can determine the validity of a credit pack ticket even if the validating supernode was not present during the ticket's creation.
 
-We also offer an convenience endpoint for use by an end user where the user can specify their PastelID and get back a list of all their valid credit pack tickets (this function can also determine the current credit balance of those tickets; how this works will be explained in more detail below when we explain the flow for Inference Requests). The code for that function can be found here:
-
-
-https://github.com/pastelnetwork/python_inference_layer_server/blob/4176bb6e3e52cdeb6e3c61f291b2944e800b764f/service_functions.py#L3091
-
+We also offer an convenience endpoint for use by an end user where the user can specify their PastelID and get back a list of all their valid credit pack tickets (this function can also determine the current credit balance of those tickets; how this works will be explained in more detail below when we explain the flow for Inference Requests). The code for that function can be found [here](https://github.com/pastelnetwork/python_inference_layer_server/blob/4176bb6e3e52cdeb6e3c61f291b2944e800b764f/service_functions.py#L3091).
 
 And here is the breakdown of how that function works:
 
@@ -774,10 +764,7 @@ We now introduce the detailed flow involved in an end user creating a new infere
 
 ----------
 
-Now let’s get into more details about how this functionality is actually implemented in the Inference Layer server code.  We will introduce a category of inference related service functions, and then give detailed breakdowns of the names of these functions and how they work (inputs, outputs, and purpose/rationale). The code for all these functions can be found here:
-
-
-https://github.com/pastelnetwork/python_inference_layer_server/blob/master/service_functions.py
+Now let’s get into more details about how this functionality is actually implemented in the Inference Layer server code.  We will introduce a category of inference related service functions, and then give detailed breakdowns of the names of these functions and how they work (inputs, outputs, and purpose/rationale). The code for all these functions can be found [here](https://github.com/pastelnetwork/python_inference_layer_server/blob/master/service_functions.py).
 
 
 **Messaging Related Service Functions:**
@@ -1530,7 +1517,7 @@ These functions also ensure that the output results are properly formatted and r
 
 **Inference Request Execution Functions for Swiss Army Llama**
 
-****The next batch of service functions we will review are related to how inference requests are executed for models hosted using [Swiss Army Llama](https://github.com/Dicklesworthstone/swiss_army_llama), which is an open-source framework for running large language models (LLMs) and computing and storing embedding vectors of documents (and also of audio files, which are transcribed to text using [Whisper](https://github.com/SYSTRAN/faster-whisper)) in one of two ways:
+The next batch of service functions we will review are related to how inference requests are executed for models hosted using [Swiss Army Llama](https://github.com/Dicklesworthstone/swiss_army_llama), which is an open-source framework for running large language models (LLMs) and computing and storing embedding vectors of documents (and also of audio files, which are transcribed to text using [Whisper](https://github.com/SYSTRAN/faster-whisper)) in one of two ways:
 
 
 - **Locally**— i.e., running on the CPU on the actual Supernode server itself;
@@ -1639,7 +1626,6 @@ These functions are responsible for submitting the inference requests to the Swi
     - If the inference type is not supported, it logs a warning message and returns `None` for both the output results and file type strings.
     - It returns the output results and file type strings obtained from the respective handler function.
     
-
 These functions play a crucial role in executing inference requests using the Swiss Army Llama service: they handle the communication with the Swiss Army Llama service, construct the necessary payloads based on the inference request details, and process the service responses to extract the relevant output results.
 
 The rationale behind having separate handler functions for different inference types is to provide a modular and extensible approach to supporting various capabilities of the Swiss Army Llama service. Each inference type has its own specific requirements, parameters, and response formats, so having dedicated handler functions allows for customized handling of each type.
@@ -1650,13 +1636,11 @@ The exception handling mechanism implemented in the `handle_swiss_army_llama_exc
 
 Overall, these functions enable the Pastel Inference Layer to seamlessly integrate with the Swiss Army Llama service, providing users with the ability to run large language models locally or on a remote server. They handle the execution of various inference types, such as text completion, document and audio embedding, image question answering, and semantic search. By offering flexibility in the deployment options and supporting different inference capabilities, these functions contribute to the versatility and robustness of the Pastel Inference Layer.
 
-
 ----------
 
 **Inference Request Execution and Result Retrieval Functions**
 
 The final batch of service functions we will review are related to the overall execution of inference requests, checking the status of inference results, and retrieving the output results while verifying authorization. These functions tie together the various components of the inference request flow and provide the necessary endpoints for users to interact with the system. Let's go through each function and explain their purpose and how they contribute to the inference request execution and result retrieval process:
-
 
 1. **`execute_inference_request`**:
     - This is the main function responsible for executing an inference request.
@@ -1694,7 +1678,6 @@ The final batch of service functions we will review are related to the overall e
     - If the `InferenceAPIUsageRequest` is not found or the `requesting_pastelid` does not match the `requesting_pastelid` of the `InferenceAPIUsageRequest`, it raises a `ValueError` indicating unauthorized access to the inference output results.
     - If the authorization is successful, it returns the `InferenceAPIOutputResult` object.
     
-
 These functions play a critical role in the overall execution and management of inference requests in the Pastel Inference Layer. The `execute_inference_request` function serves as the central point of control for executing an inference request. It determines the appropriate API or service to submit the request to based on the model specified in the `InferenceAPIUsageRequest`. By delegating the actual submission to the respective functions for each API or service, it maintains a modular and extensible architecture.
 
 The `check_status_of_inference_request_results` function provides a way for users to check the status of their inference requests. It allows them to determine whether the results are available or if the request is still being processed. This function is typically called by the user periodically to poll for the availability of the results.
@@ -1707,20 +1690,13 @@ Error handling is also incorporated into these functions. If any exceptions occu
 
 Overall, these functions provide the necessary functionality for executing inference requests, checking the status of results, and retrieving the output results while verifying authorization. They encapsulate the complexity of interacting with different APIs and services, and provide a consistent interface for users to interact with the Pastel Inference Layer. By leveraging the modular design and database transactions, these functions ensure a reliable and secure execution and retrieval process for inference requests.
 
-
 ----------
-
 
 ## Misc Other Infrastructure Code
 
-Here, we explain other parts of the Inference Server system code that we haven't touched on yet above. First of these is the code used by the Inference Server to initially install, set up, configure, and update Swiss Army Llama for local operation on the Supernode server itself (setting Swiss Army Llama up on a remote machine for use with the Inference Server is a separate process that we will detail in a later section). This is handled from the code file `setup_swiss_army_llama.py`, which is called from the `main.py` entrypoint code file in the Inference Server as a startup task of the FastAPI server. The complete code for `setup_swiss_army_llama.py` can be found here:
-
-
-https://github.com/pastelnetwork/python_inference_layer_server/blob/master/setup_swiss_army_llama.py
-
+Here, we explain other parts of the Inference Server system code that we haven't touched on yet above. First of these is the code used by the Inference Server to initially install, set up, configure, and update Swiss Army Llama for local operation on the Supernode server itself (setting Swiss Army Llama up on a remote machine for use with the Inference Server is a separate process that we will detail in a later section). This is handled from the code file `setup_swiss_army_llama.py`, which is called from the `main.py` entrypoint code file in the Inference Server as a startup task of the FastAPI server. The complete code for `setup_swiss_army_llama.py` can be found [here](https://github.com/pastelnetwork/python_inference_layer_server/blob/master/setup_swiss_army_llama.py).
 
 The `setup_swiss_army_llama.py` file contains various utility functions and a main function `check_and_setup_swiss_army_llama` that orchestrates the entire setup process. Let's go through each function and explain their purpose and how they contribute to setting up and managing the Swiss Army Llama service:
-
 
 1. `get_external_ip_func`:
     - This function attempts to retrieve the external IP address of the server by querying several public IP address providers.
