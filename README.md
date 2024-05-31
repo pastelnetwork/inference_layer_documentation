@@ -1,4 +1,8 @@
 # Introduction and Overview of Pastel Inference Layer
+
+![Illustration](https://raw.githubusercontent.com/pastelnetwork/inference_layer_documentation/master/inference_illustration.webp)
+
+
 The new Pastel Inference Layer is [implemented](https://github.com/pastelnetwork/python_inference_layer_server) entirely in Python on the server side. It works entirely with regular pasteld (`pasteld` is the Pastel Daemon binary, which is a compiled C++ binary that is the heart of the Pastel system) features accessed via the RPC (though some of this functionality has since been directly integrated as new or expanded pasteld RPC methods instead of being done externally all in Python).
 
 There are 2 main components of the Inference Layer:
