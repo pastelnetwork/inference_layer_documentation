@@ -595,7 +595,6 @@ We now introduce the detailed flow involved in an end user creating a new infere
 
 **Inference Request Flow:**
 
-****
 1. **Initiating the Inference Request:**
     - The user creates a new inference request by sending a POST request to the `/make_inference_api_usage_request` endpoint with an `InferenceAPIUsageRequest` message, which looks like this:
 
@@ -874,7 +873,6 @@ These models work together with the functions to facilitate the processing of in
 **Model Menu and API Based Service Related Functions:** 
 
 The next group of service functions we will review are related to how Supernodes determine which models they themselves support, and which ones are supported by other Supernodes. It also includes functions which are used by the Supernodes to automatically test and verify API keys for use with API based services such as OpenAI, Stability, Groq, Mistral, etc. These functions include the following:
-****
 
 - **`is_model_supported`**:
     - This function checks if a desired model is supported by a Supernode. It takes the model menu, desired model canonical string, desired model inference type string, and desired model parameters JSON as input. 
@@ -1280,13 +1278,11 @@ This pre-check step helps to mitigate the risk of sending inappropriate or offen
 
 The function also handles scenarios where the Swiss Army Llama service may not be responding and provides fallback mechanisms to ensure the pre-check can still be performed using the local service if available.
 
-
 ----------
 
-******Validating and Processing New Inference Requests:**
+**Validating and Processing New Inference Requests:**
 
 The next batch of service functions play crucial roles in the inference request flow, specifically in validating and processing incoming inference requests. They also help us to determine how much a given credit pack ticket has been used so we can determine if it contains enough remaining credits to cover the cost of the currently contemplated inference request, as well as detecting the corresponding confirmation tracking transactions that are used by end users to authorize a new inference request. Let's go through each function and explain their purpose and how they tie into the inference flow:
-
 
 - **`validate_inference_api_usage_request`**:
     - This function takes an `InferenceAPIUsageRequest` object as input and performs a series of validations to ensure the integrity and validity of the inference request.
@@ -1303,7 +1299,6 @@ The next batch of service functions play crucial roles in the inference request 
     - The function determines the current credit balance of the credit pack ticket using the `determine_current_credit_pack_balance_based_on_tracking_transactions` function and checks if there are sufficient credits available for the requested inference. If the balance is insufficient, the function returns `False`.
     - Finally, the function returns a tuple indicating the validity of the request, the proposed cost in credits, and the remaining credits after the request.
 
-
 - **`check_burn_address_for_tracking_transaction`**:
     - This function checks the burn address for a specific tracking transaction related to an inference request confirmation.
     - It takes the tracking address, expected amount, transaction ID (TXID), maximum block height, and optional retry parameters as input.
@@ -1312,7 +1307,6 @@ The next batch of service functions play crucial roles in the inference request 
     - If a transaction with an amount greater than or equal to the expected amount is found, the function returns `False` for an exact match but `True` for an exceeding transaction, along with the transaction details.
     - If no matching transaction is found after the specified number of retries, the function returns `False`.
     - This function is used to verify that the user has indeed sent the required tracking transaction to the burn address, confirming their agreement to pay for the inference request using their credits.
-
 
 -  **`determine_current_credit_pack_balance_based_on_tracking_transactions`**:
     - This function is a crucial part of the inference flow, as it calculates the current balance of credits available in a specific credit pack ticket. This function is essential for ensuring that users have sufficient credits to cover the cost of their inference requests and for keeping track of the credits consumed over time.
@@ -1335,7 +1329,6 @@ The next batch of service functions play crucial roles in the inference request 
     - This function is crucial for maintaining the integrity of the credit system and ensuring that users can only consume the credits they have available in their credit packs. It allows the inference flow to proceed smoothly, with the `responding_supernode` being able to verify that the user has sufficient credits before executing the inference request.
     - Moreover, the function's ability to handle new blocks and transactions ensures that the credit balance remains up to date, even as new inference requests are processed and new tracking transactions are added to the blockchain.
 
-
 - **`process_inference_api_usage_request`**:
     - This function takes an `InferenceAPIUsageRequest` object as input and processes the inference request.
     - It first calls the `validate_inference_api_usage_request` function to validate the request. If the request is invalid, an exception is raised.
@@ -1344,7 +1337,6 @@ The next batch of service functions play crucial roles in the inference request 
     - The function then calls the `create_and_save_inference_api_usage_response` function to create and save an `InferenceAPIUsageResponse` object based on the saved request, proposed cost in credits, remaining credits after the request, and credit usage tracking PSL address.
     - Finally, the function returns the created `InferenceAPIUsageResponse` object.
 
-
 - **`create_and_save_inference_api_usage_response`**:
     - This is a helper function used by `process_inference_api_usage_request` to create and save an `InferenceAPIUsageResponse` object.
     - It takes the saved inference API usage request, proposed cost in credits, remaining credits after the request, and credit usage tracking PSL address as input.
@@ -1352,7 +1344,6 @@ The next batch of service functions play crucial roles in the inference request 
     - It computes the hash of the response fields using the `compute_sha3_256_hash_of_sqlmodel_response_fields` function and signs the hash with the local Supernode's PastelID using the `sign_message_with_pastelid_func` function.
     - The function then saves the `InferenceAPIUsageResponse` object to the database using an asynchronous database session.
     - Finally, it returns the saved `InferenceAPIUsageResponse` object.
-    
 
 These functions play a critical role in the inference request flow by validating incoming requests, checking the availability of requested models and services, calculating the cost of the inference in credits, and ensuring sufficient credits are available in the associated credit pack ticket. They also handle the creation and saving of the `InferenceAPIUsageResponse` object, which represents the Supernode's response to the inference request, including the proposed cost and remaining credits.
 
@@ -1360,13 +1351,11 @@ The `validate_inference_api_usage_request` function acts as a gatekeeper, perfor
 
 The `process_inference_api_usage_request` function orchestrates the overall processing of the inference request. It relies on the `validate_inference_api_usage_request` function to validate the request and then saves the request, retrieves necessary information, and creates and saves the corresponding `InferenceAPIUsageResponse` object.
 
-
 ----------
 
 **Processing Inference Confirmations and Saving Output Results:**
 
 The next batch of service functions pertain to several important functions related to processing inference confirmations, saving inference output results. Let's go through each function and explain their purpose and how they tie into the inference flow:
-
 
 - **`process_inference_confirmation`**:
     - This function processes the confirmation of an inference request sent by the user.
@@ -1388,8 +1377,7 @@ The next batch of service functions pertain to several important functions relat
     - Finally, it saves the `InferenceAPIOutputResult` record to the database using an asynchronous database session.
     - If any error occurs during the process, the function logs the error and re-raises the exception.
     
-
-These functions play crucial roles in the inference flow, specifically in the confirmation and result saving stages. The `process_inference_confirmation` function is responsible for handling the user's confirmation of an inference request. When the user sends a tracking transaction to the burn address, indicating their agreement to pay for the inference using their credits, this function verifies the transaction and updates the status of the inference request to "confirmed". It also triggers the execution of the inference request by creating a new task.
+These functions play important roles in the inference flow, specifically in the confirmation and result saving stages. The `process_inference_confirmation` function is responsible for handling the user's confirmation of an inference request. When the user sends a tracking transaction to the burn address, indicating their agreement to pay for the inference using their credits, this function verifies the transaction and updates the status of the inference request to "confirmed". It also triggers the execution of the inference request by creating a new task.
 
 The `save_inference_output_results` function is called after the inference request has been executed and the output results are available. It takes the output results, along with other relevant information, and creates an `InferenceAPIOutputResult` record in the database. This record contains the inference results, file type information, `responding_supernode`'s PastelID, and other metadata. The function also computes a hash of the result fields and signs it with the Supernode's PastelID to ensure the integrity and authenticity of the results.
 
@@ -1400,7 +1388,6 @@ The `save_inference_output_results` function is called after the inference reque
 **Inference Request Execution Functions for API-Based Services and Models**
 
 The next batch of service functions we will review are related to how inference requests are executed for API-based services and models, such as those from Stability, OpenAI, Anthropic, Mistral, Groq, and OpenRouter. These functions are responsible for submitting the inference requests to the respective APIs, handling the responses, and processing the output results. Let's go through each function and explain their purpose and how they contribute to the execution of inference requests:
-
 
 1. **`get_claude3_model_name`**:
     - This is a helper function specific to Anthropic's Claude API. It maps the model names used in the Pastel Inference Layer to the corresponding model names recognized by the Claude API.
@@ -1504,29 +1491,23 @@ The next batch of service functions we will review are related to how inference 
         - It returns the output results and file type strings.
     - If any errors occur during the process or if the inference type is not supported, it logs an error message and returns `None`.
     
-
-These functions play a crucial role in executing inference requests for API-based services and models. They handle the communication with the respective APIs, construct the necessary payloads based on the inference request details, and process the API responses to extract the relevant output results.
+These functions play an important role in executing inference requests for API-based services and models. They handle the communication with the respective APIs, construct the necessary payloads based on the inference request details, and process the API responses to extract the relevant output results.
 
 The rationale behind having separate functions for each API is to provide a modular and extensible approach to integrating different APIs into the Pastel Inference Layer. Each API has its own specific requirements, endpoints, and response formats, so having dedicated functions allows for customized handling of each API's peculiarities.
 
 These functions also ensure that the output results are properly formatted and returned along with the appropriate file type strings. This is important for the Pastel Inference Layer to correctly interpret and handle the output results based on their data types. The functions enable the system to seamlessly integrate with various APIs, execute inference requests based on user specifications, and retrieve the generated output results. By providing a consistent interface for different APIs, these functions contribute to the flexibility and extensibility of the Pastel Inference Layer, allowing it to support a wide range of models and services.
 
-
 ----------
-
 
 **Inference Request Execution Functions for Swiss Army Llama**
 
 The next batch of service functions we will review are related to how inference requests are executed for models hosted using [Swiss Army Llama](https://github.com/Dicklesworthstone/swiss_army_llama), which is an open-source framework for running large language models (LLMs) and computing and storing embedding vectors of documents (and also of audio files, which are transcribed to text using [Whisper](https://github.com/SYSTRAN/faster-whisper)) in one of two ways:
 
-
 - **Locally**— i.e., running on the CPU on the actual Supernode server itself;
-
 
 - **On a remote server**— i.e., a GPU-enabled instance set up by the Supernode using a cost effective service such as [vast.ai](https://vast.ai/) and a [template image](https://cloud.vast.ai/?ref_id=78066&template_id=3c711e5ddd050882f0eb6f4ce1b8cc28) already set up for Swiss Army Llama; this remote GPU instance can then be shared across all of the Supernode operators various Supernodes; 
 
 These functions are responsible for submitting the inference requests to the Swiss Army Llama service, handling the responses, and processing the output results. Let's go through each function and explain their purpose and how they contribute to the execution of inference requests:
-
 
 1. **`determine_swiss_army_llama_port`**:
     - This function determines the appropriate port to use for communicating with the Swiss Army Llama service.
@@ -1806,12 +1787,10 @@ The `setup_swiss_army_llama.py` file contains various utility functions and a ma
     - It checks if the Swiss Army Llama port is available.
     - If the service is responding and the repository hasn't been updated, it considers Swiss Army Llama to be already set up and skips the setup process.
     - If the service is not responding or the repository has been updated, it kills any running instances of Swiss Army Llama and runs the setup process.
-    
 
 These functions work together to automate the setup and management of the Swiss Army Llama service on the Supernode server. The `check_and_setup_swiss_army_llama` function serves as the entry point and is called from the `main.py` file as a startup task of the FastAPI server.
 
 By checking for updates in the Swiss Army Llama repository, ensuring the necessary dependencies are installed, configuring the environment, and managing the systemd service, this code ensures that the Swiss Army Llama service is properly set up and running on the Supernode server. It also handles scenarios where the service may need to be restarted or updated based on changes in the repository or the service's responsiveness.
-
 
 ----------
 
@@ -1896,7 +1875,6 @@ The encryption and decryption process strikes a balance between security and usa
 
 In summary, the environment variable setup and processing in the Pastel Inference Layer server play a vital role in the configuration and security of the application. The use of a `.env` file and the `python-decouple` library enables flexible and centralized management of configuration settings. The encryption and decryption of sensitive fields using the `Fernet` algorithm ensures the protection of critical information while still allowing seamless integration with the server's functionality. This setup demonstrates a thoughtful approach to balancing configuration flexibility, security, and ease of use in the Pastel Inference Layer server.
 
-
 ----------
 
 **Script and** **Ansible Playbook for Deploying Inference Server**
@@ -1941,7 +1919,6 @@ By automating the deployment process, these scripts and playbooks reduce the cha
 
 Overall, the `initial_inference_server_setup_script.sh` and `ansible_playbook_to_update_and_start_pastel_inference_layer.yml` provide a powerful and efficient way to deploy and manage the Pastel Inference Layer server. They encapsulate the necessary steps and best practices for setting up the server, making it easy for developers and system administrators to deploy and maintain the Inference Server infrastructure.
 
-
 ----------
 
 **Using a Remote GPU-Enabled Instance of Swiss Army Llama on Vast.ai to Speed Up Inference**
@@ -1961,7 +1938,7 @@ The Dockerfile performs the following steps:
 8. Defines the command to start the benchmark, Redis server, and Swiss Army Llama server when the container starts.
 9. 
 
-The resulting Docker image is published on Docker Hub at `https://hub.docker.com/repository/docker/jemanuel82/vastai_swiss_army_llama_template/general`, making it easily accessible for deployment. The exact Dockerfile contents is shown below:
+The resulting Docker image is published on Docker Hub [here](https://hub.docker.com/repository/docker/jemanuel82/vastai_swiss_army_llama_template/general), making it easily accessible for deployment. The exact Dockerfile contents is shown below:
 
 ```bash
     # Use the PyTorch image with CUDA and cuDNN pre-installed
@@ -2036,13 +2013,13 @@ To get started with Vast.ai, users need to follow these steps:
 
 1. Create an account on Vast.ai and purchase credits using a credit card (via Stripe) or by paying with cryptocurrency.
 2. Generate an SSH key and add it to their Vast.ai account for secure access to provisioned instances.
-3. Select the Swiss Army Llama template (`[https://cloud.vast.ai/?ref_id=78066&template_id=3c711e5ddd050882f0eb6f4ce1b8cc28](https://cloud.vast.ai/?ref_id=78066&template_id=3c711e5ddd050882f0eb6f4ce1b8cc28)`) to speed up the deployment process. This template specifies the custom Docker image and the required storage of 60GB.
+3. Select the [Swiss Army Llama template](https://cloud.vast.ai/?ref_id=78066&template_id=3c711e5ddd050882f0eb6f4ce1b8cc28](https://cloud.vast.ai/?ref_id=78066&template_id=3c711e5ddd050882f0eb6f4ce1b8cc28) to speed up the deployment process. This template specifies the custom Docker image and the required storage of 60GB.
 4. Provision the instance on Vast.ai, which will provide the IP address and port for SSH access.
 5. Access the provisioned machine using SSH with the command provided by Vast.ai, similar to:
 
-
+```bash
     ssh -i ~/vastai_privkey -p 20765 root@106.185.159.136
-
+```
 
 6. Once connected to the instance, navigate to the Swiss Army Llama directory and start the server:
 
@@ -2067,7 +2044,6 @@ To integrate the remote Swiss Army Llama instance with the local Supernode infer
 
 With these configurations in place, the Pastel Inference Layer server will automatically detect the availability of the remote Swiss Army Llama instance and establish an SSH tunnel to the Vast.ai machine. If the connection is successful, all Swiss Army Llama requests from the Supernode inference servers will be routed to the associated remote GPU-enabled instance.
 This setup offers several benefits:
-
 
 1. Improved Inference Performance: By utilizing a GPU-enabled instance, inference tasks can be accelerated significantly, reducing latency and improving overall performance.
 2. Cost-Effectiveness: Vast.ai's decentralized marketplace allows users to rent GPU resources at affordable rates, making it more cost-effective compared to traditional cloud providers.
