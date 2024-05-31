@@ -324,7 +324,7 @@ First off, we should discuss how credit pack tickets are priced in PSL terms in 
 Various service functions are used to do this. Let's go through each function and explain their purpose and how they contribute to the estimation process:
 
 
-- `**fetch_current_psl_market_price**`:
+- **`fetch_current_psl_market_price`**:
     - This function retrieves the current market price of PSL (Pastel) from two sources: CoinMarketCap and CoinGecko.
     - It sends HTTP requests to the respective APIs and extracts the PSL price in USD from the responses.
     - If the price cannot be retrieved from either source, it retries after a short delay.
@@ -332,7 +332,7 @@ Various service functions are used to do this. Let's go through each function an
     - The function validates the average price to ensure it falls within a reasonable range.
     - It returns the average PSL price in USD.
     
-- `**estimated_market_price_of_inference_credits_in_psl_terms**`:
+- **`estimated_market_price_of_inference_credits_in_psl_terms`**:
     - This function estimates the market price of inference credits in PSL terms.
     - It first retrieves the current PSL market price in USD using the `fetch_current_psl_market_price` function.
     - It then calculates the cost per credit in USD, considering a target value per credit and a target profit margin.
@@ -340,14 +340,14 @@ Various service functions are used to do this. Let's go through each function an
     - The cost per credit in USD is converted to PSL terms by dividing it by the current PSL market price.
     - The function returns the estimated market price of 1.0 inference credit in PSL.
     
-- `**calculate_price_difference_percentage**` (in the inference client):
+- **`calculate_price_difference_percentage`** (in the inference client):
     - This function calculates the percentage difference between a quoted price and an estimated price.
     - It takes the quoted price and estimated price as input and computes the absolute difference between them.
     - The difference is then divided by the estimated price to obtain the percentage difference.
     - It raises an error if the estimated price is zero to avoid division by zero.
     - The function returns the price difference percentage.
     
-- `**confirm_preliminary_price_quote**` (in the inference client):
+- **`confirm_preliminary_price_quote`** (in the inference client):
     - This function confirms the preliminary price quote for a credit pack purchase.
     - It takes the preliminary price quote, maximum total credit pack price, and maximum per credit price as input.
     - If the maximum prices are not provided, it uses default values.
@@ -789,10 +789,10 @@ Note that messages are not currently encrypted, so any Supernode can see the con
 There are several functions crucial for handling inference requests and processing broadcast messages in the Inference Layer server. Let's go through each function and explain how they tie into the various steps of the inference request flow:
 
 
-- `**broadcast_message_to_n_closest_supernodes_to_given_pastelid**`
+- **`broadcast_message_to_n_closest_supernodes_to_given_pastelid`**
     - This function is responsible for broadcasting a message to the closest supernodes based on a given PastelID. It takes the input PastelID, message body, and message type as parameters. First, it retrieves the list of supernodes and filters them based on their support for the desired model using the `is_model_supported` function. It excludes the local supernode from the list of supported supernodes. If no other supported supernodes are found, it falls back to using all supernodes except the local one. The function then selects the N closest supernodes to the input PastelID from the supported supernodes list. It signs the message using the local supernode's PastelID and broadcasts it to the selected supernodes. This function is used in the "Broadcasting the Inference Request and Response" step to inform nearby supernodes about the inference request and response.
     
-- `**process_broadcast_messages**`
+- **`process_broadcast_messages`**
     This function processes broadcast messages received by the supernode. It takes the message and a database session as input. The function first checks the message type to determine how to handle it.
     For `inference_request_response_announcement_message` messages:
     - It checks if the corresponding `InferenceAPIUsageRequest` and `InferenceAPIUsageResponse` records already exist in the database.
@@ -804,7 +804,7 @@ There are several functions crucial for handling inference requests and processi
     - If the record already exists, it skips the insertion to avoid duplicates.
     This function is used to process and store the information received from broadcast messages related to inference requests and results.
     
-- `**monitor_new_messages**`
+- **`monitor_new_messages`**
     This function continuously monitors for new messages received by the Supernode. It runs in an infinite loop, periodically checking for new messages. It retrieves the last processed timestamp from the database to determine the starting point for processing new messages. The function fetches new messages from the masternode messaging system using the `list_sn_messages_func`. For each new message, it checks if the message already exists in the database to avoid duplicates. If the message is new, it updates various metadata tables in the database, including:
     - `MessageSenderMetadata`: Tracks the total messages sent and data sent by each sending Supernode.
     - `MessageReceiverMetadata`: Tracks the total messages received and data received by each receiving Supernode.
@@ -889,14 +889,14 @@ These models work together with the functions to facilitate the processing of in
 The next group of service functions we will review are related to how Supernodes determine which models they themselves support, and which ones are supported by other Supernodes. It also includes functions which are used by the Supernodes to automatically test and verify API keys for use with API based services such as OpenAI, Stability, Groq, Mistral, etc. These functions include the following:
 ****
 
-- `**is_model_supported**`:
+- **`is_model_supported`**:
     - This function checks if a desired model is supported by a Supernode. It takes the model menu, desired model canonical string, desired model inference type string, and desired model parameters JSON as input. 
     - The function compares the desired model information with the models available in the model menu, ensuring that the desired model canonical string matches any of the models in the menu with a similarity threshold of 95% using fuzzy matching (via the [FuzzyWuzzy](https://pypi.org/project/fuzzywuzzy/) library). 
     - If a match is found, it further checks if the desired inference type string is supported by the matched model and verifies that the desired model parameters are valid according to the parameter specifications in the model menu. 
     - This function is used in the "Processing the Inference Request" step to ensure that the `responding_supernode` supports the requested model and inference type.
 
 
-- `**get_inference_model_menu**`:
+- **`get_inference_model_menu`**:
 ****    - This function is responsible for retrieving the inference model menu, which contains information about the available models and their supported parameters.
     - It first loads the API key test results from a file using the `load_api_key_tests` function.
     - It then fetches the latest model menu from a GitHub URL using an asynchronous HTTP client.
@@ -907,19 +907,19 @@ The next group of service functions we will review are related to how Supernodes
     - Finally, the function returns the filtered model menu.
     - This function is used in the "Processing the Inference Request" step to provide the available models and their parameters to the `is_model_supported` function.
     
-- `**load_api_key_tests**`:
+- **`load_api_key_tests`**:
     - This function loads the API key test results from a JSON file.
     - It reads the contents of the file and returns the loaded JSON data.
     - If the file is not found, it returns an empty dictionary.
     - This function is used by `get_inference_model_menu` to load the existing API key test results.
     
-- `**save_api_key_tests**`:
+- **`save_api_key_tests`**:
     - This function saves the API key test results to a JSON file.
     - It takes the `api_key_tests` dictionary as input and writes it to the specified file path.
     - This function is used by `get_inference_model_menu` to save the updated API key test results after running new tests.
 
 
-- `**is_api_key_valid**`:
+- **`is_api_key_valid`**:
     - This function checks the validity of an API key for a specific API provider.
     - It takes the `api_name` and `api_key_tests` dictionary as input.
     - If the API name is not found in the `api_key_tests` dictionary or the existing test result is outdated (based on the `is_test_result_valid` function), it runs a new API key test using the `run_api_key_test` function.
@@ -927,13 +927,13 @@ The next group of service functions we will review are related to how Supernodes
     - It returns the validity status of the API key (True or False).
     - This function is used by `get_inference_model_menu` to determine which models should be included in the filtered model menu based on the availability of valid API keys.
     
-- `**is_test_result_valid**`:
+- **`is_test_result_valid`**:
     - This function checks if an API key test result is still valid based on a specified validity duration.
     - It takes the `test_timestamp` as input and compares it with the current timestamp.
     - If the difference between the current timestamp and the test timestamp is less than the specified validity duration (e.g., 24 hours), it considers the test result as valid.
     - This function is used by `is_api_key_valid` to determine if a new API key test needs to be run.
     
-- `**run_api_key_test**`:
+- **`run_api_key_test`**:
     - This function runs an API key test for a specific API provider.
     - It takes the `api_name` as input and calls the corresponding test function based on the API name.
     - It supports testing API keys for Stability, OpenAI, Mistral, Groq, Anthropic (Claude), and OpenRouter.
@@ -1218,14 +1218,14 @@ Furthermore, the `model_menu.json` file serves as a single source of truth for m
 The next batch of functions pertain to estimating the cost of performing specific inference requests depending on the nature of the request and specified models and model parameters. Let's go through each function and explain their purpose and how they contribute to the cost estimation process.
 
 
-1. `**get_tokenizer**` **and** `**count_tokens**`**:**
+1. **`get_tokenizer`** **and** **`count_tokens`**:
 - The `get_tokenizer` function maps model names to their corresponding tokenizer names using a predefined mapping. It uses fuzzy string matching to find the best match for the given model name and returns the appropriate tokenizer name.
 - The `count_tokens` function takes a model name and input data as parameters and counts the number of tokens in the input data using the appropriate tokenizer for the specified model.
 - It handles different types of tokenizers, such as GPT-2, GPT-Neo, BERT, RoBERTa, and specific tokenizers for models like Claude, Whisper, and CLIP.
 - The token count is important for estimating the cost of inference requests, as many pricing models are based on the number of input and output tokens.
 
 
-2. `**calculate_api_cost**`**:**
+2. **`calculate_api_cost`**:
 - This function calculates the estimated cost of an inference request based on the pricing data for each API service and model.
 - It takes the model name, input data, and model parameters as input and uses fuzzy string matching to find the best match for the model name in the predefined pricing data.
 - For Stability models, the cost is calculated based on the credits per call and the number of completions to generate.
@@ -1234,7 +1234,7 @@ The next batch of functions pertain to estimating the cost of performing specifi
 - The function returns the estimated cost in dollars.
 
 
-3. `**convert_document_to_sentences**`**:**
+3. **`convert_document_to_sentences`**:
 - This function converts a document file to sentences using the Swiss Army Llama service.
 - It checks if either the local or remote Swiss Army Llama service is responding and selects the appropriate port.
 - It uploads the document file and retrieves the file metadata (URL, hash, size) using the `upload_and_get_file_metadata` function.
@@ -1243,7 +1243,7 @@ The next batch of functions pertain to estimating the cost of performing specifi
 - The function returns a dictionary containing the individual sentences and the total number of sentences in the document.
 
 
-4. `**calculate_proposed_inference_cost_in_credits**`**:**
+4. **`calculate_proposed_inference_cost_in_credits`**:
 - This function calculates the proposed cost of an inference request in credits based on the requested model, model parameters, inference type, and input data.
 - It distinguishes between API-based models and local LLM models (Swiss Army Llama).
 - For API-based models, it calls the `calculate_api_cost` function to estimate the cost in dollars and then converts it to credits based on a target value per credit and profit margin.
@@ -1264,7 +1264,7 @@ These functions work together to estimate the cost of performing specific infere
 Next up are a couple utility functions that are used with Swiss Army Llama:
 
 
-- `**is_swiss_army_llama_responding**`:
+- **`is_swiss_army_llama_responding`**:
     - This function checks if the Swiss Army Llama service is responding, either locally or remotely.
     - It takes a boolean parameter `local` to determine whether to check the local or remote service.
     - Based on the `local` parameter, it sets the appropriate port number for the service.
@@ -1272,7 +1272,7 @@ Next up are a couple utility functions that are used with Swiss Army Llama:
     - If the response status code is 200 (OK), it means the service is responding, and the function returns `True`. Otherwise, it returns `False`.
     - Checking the responsiveness of the Swiss Army Llama service is important to ensure that it is available for performing inference requests and other tasks.
     
-- `**check_if_input_text_would_get_rejected_from_api_services**`:
+- **`check_if_input_text_would_get_rejected_from_api_services`**:
     - This is an asynchronous function that checks if the input text for an inference request is likely to be rejected or cause problems with API services like OpenAI.
     - It first checks if the Swiss Army Llama service is responding, either locally or remotely, based on the configuration settings.
     - If neither the local nor the remote Swiss Army Llama service is responding, it logs an error message and returns `None`, indicating that the check cannot be performed.
@@ -1301,7 +1301,7 @@ The function also handles scenarios where the Swiss Army Llama service may not b
 The next batch of service functions play crucial roles in the inference request flow, specifically in validating and processing incoming inference requests. They also help us to determine how much a given credit pack ticket has been used so we can determine if it contains enough remaining credits to cover the cost of the currently contemplated inference request, as well as detecting the corresponding confirmation tracking transactions that are used by end users to authorize a new inference request. Let's go through each function and explain their purpose and how they tie into the inference flow:
 
 
-- `**validate_inference_api_usage_request**`:
+- **`validate_inference_api_usage_request`**:
     - This function takes an `InferenceAPIUsageRequest` object as input and performs a series of validations to ensure the integrity and validity of the inference request.
     - It first calls the `validate_inference_request_message_data_func` to validate the request message data against predefined validation rules. If any validation errors are found, an exception is raised.
     - It extracts relevant information from the request, such as the requesting PastelID, credit pack ticket TXID, requested model, inference type, model parameters, and input data.
@@ -1317,7 +1317,7 @@ The next batch of service functions play crucial roles in the inference request 
     - Finally, the function returns a tuple indicating the validity of the request, the proposed cost in credits, and the remaining credits after the request.
 
 
-- `**check_burn_address_for_tracking_transaction**`:
+- **`check_burn_address_for_tracking_transaction`**:
     - This function checks the burn address for a specific tracking transaction related to an inference request confirmation.
     - It takes the tracking address, expected amount, transaction ID (TXID), maximum block height, and optional retry parameters as input.
     - The function uses the RPC connection to retrieve transactions from the blockchain and searches for a transaction that matches the specified criteria.
@@ -1327,7 +1327,7 @@ The next batch of service functions play crucial roles in the inference request 
     - This function is used to verify that the user has indeed sent the required tracking transaction to the burn address, confirming their agreement to pay for the inference request using their credits.
 
 
--  `**determine_current_credit_pack_balance_based_on_tracking_transactions**`:
+-  **`determine_current_credit_pack_balance_based_on_tracking_transactions`**:
     - This function is a crucial part of the inference flow, as it calculates the current balance of credits available in a specific credit pack ticket. This function is essential for ensuring that users have sufficient credits to cover the cost of their inference requests and for keeping track of the credits consumed over time.
     - The function takes the `credit_pack_ticket_txid` as input, which uniquely identifies the credit pack ticket.
     - It retrieves the credit pack ticket data using the `retrieve_credit_pack_ticket_using_txid` function, which fetches the ticket information from the blockchain using the provided TXID.
@@ -1349,7 +1349,7 @@ The next batch of service functions play crucial roles in the inference request 
     - Moreover, the function's ability to handle new blocks and transactions ensures that the credit balance remains up to date, even as new inference requests are processed and new tracking transactions are added to the blockchain.
 
 
-- `**process_inference_api_usage_request**`:
+- **`process_inference_api_usage_request`**:
     - This function takes an `InferenceAPIUsageRequest` object as input and processes the inference request.
     - It first calls the `validate_inference_api_usage_request` function to validate the request. If the request is invalid, an exception is raised.
     - If the request is valid, the function saves the inference API usage request using the `save_inference_api_usage_request` function.
@@ -1358,7 +1358,7 @@ The next batch of service functions play crucial roles in the inference request 
     - Finally, the function returns the created `InferenceAPIUsageResponse` object.
 
 
-- `**create_and_save_inference_api_usage_response**`:
+- **`create_and_save_inference_api_usage_response`**:
     - This is a helper function used by `process_inference_api_usage_request` to create and save an `InferenceAPIUsageResponse` object.
     - It takes the saved inference API usage request, proposed cost in credits, remaining credits after the request, and credit usage tracking PSL address as input.
     - The function generates a unique identifier for the inference response and creates an `InferenceAPIUsageResponse` instance with the relevant information.
@@ -1381,7 +1381,7 @@ The `process_inference_api_usage_request` function orchestrates the overall proc
 The next batch of service functions pertain to several important functions related to processing inference confirmations, saving inference output results. Let's go through each function and explain their purpose and how they tie into the inference flow:
 
 
-- `**process_inference_confirmation**`:
+- **`process_inference_confirmation`**:
     - This function processes the confirmation of an inference request sent by the user.
     - It takes the inference request ID and an `InferenceConfirmation` object as input.
     - The function retrieves the corresponding `InferenceAPIUsageRequest` and `InferenceAPIUsageResponse` from the database using the provided inference request ID.
@@ -1392,7 +1392,7 @@ The next batch of service functions pertain to several important functions relat
     - Finally, the function triggers the execution of the inference request by creating a new task using `asyncio.create_task(execute_inference_request(inference_request_id))`.
     - If any error occurs during the process, the function logs the error and re-raises the exception.
     
-- `**save_inference_output_results**`:
+- **`save_inference_output_results`**:
     - This function saves the output results of an inference request to the database.
     - It takes the inference request ID, inference response ID, output results dictionary, and output results file type strings as input.
     - The function generates a unique identifier for the inference result and creates an `InferenceAPIOutputResult` record without the hash and signature fields.
@@ -1415,13 +1415,13 @@ The `save_inference_output_results` function is called after the inference reque
 The next batch of service functions we will review are related to how inference requests are executed for API-based services and models, such as those from Stability, OpenAI, Anthropic, Mistral, Groq, and OpenRouter. These functions are responsible for submitting the inference requests to the respective APIs, handling the responses, and processing the output results. Let's go through each function and explain their purpose and how they contribute to the execution of inference requests:
 
 
-1. `**get_claude3_model_name**`:
+1. **`get_claude3_model_name`**:
     - This is a helper function specific to Anthropic's Claude API. It maps the model names used in the Pastel Inference Layer to the corresponding model names recognized by the Claude API.
     - It takes the `model_name` as input and returns the corresponding Claude API model name using a predefined mapping.
     - If the provided `model_name` is not found in the mapping, it returns an empty string.
     - This function ensures that the correct model name is used when submitting inference requests to the Claude API.
     
-2. `**submit_inference_request_to_stability_api**`:
+2. **`submit_inference_request_to_stability_api`**:
     - This function is responsible for submitting inference requests to the Stability API for image generation tasks.
     - It supports two types of inference requests: "text_to_image" and "creative_upscale".
     - For "text_to_image" requests:
@@ -1439,7 +1439,7 @@ The next batch of service functions we will review are related to how inference 
         - Once the upscaled image is available, it encodes the image as base64 and returns the output results and file type strings.
     - If any errors occur during the process or if the inference type is not supported, it logs an error message and returns `None`.
     
-3. `**submit_inference_request_to_openai_api**`:
+3. **`submit_inference_request_to_openai_api`**:
     - This function is responsible for submitting inference requests to the OpenAI API for various tasks, including text completion, embedding, and question-answering on images.
     - For "text_completion" requests:
         - It extracts the model parameters and input prompt from the `inference_request` object.
@@ -1462,7 +1462,7 @@ The next batch of service functions we will review are related to how inference 
         - It returns the output results and file type strings.
     - If any errors occur during the process or if the inference type is not supported, it logs an error message and returns `None`.
     
-4. `**submit_inference_request_to_openrouter**`:
+4. **`submit_inference_request_to_openrouter`**:
     - This function is responsible for submitting inference requests to the OpenRouter API for text completion tasks.
     - It extracts the model parameters and input prompt from the `inference_request` object.
     - It constructs the necessary JSON payload based on the model parameters, such as model, input prompt, max tokens, and temperature.
@@ -1471,7 +1471,7 @@ The next batch of service functions we will review are related to how inference 
     - It returns the output results and file type strings.
     - If any errors occur during the process or if the inference type is not supported, it logs an error message and returns `None`.
     
-5. `**submit_inference_request_to_mistral_api**`:
+5. **`submit_inference_request_to_mistral_api`**:
     - This function is responsible for submitting inference requests to the Mistral API for text completion and embedding tasks.
     - For "text_completion" requests:
         - It extracts the model parameters, input prompt, and number of completions from the `inference_request` object.
@@ -1486,7 +1486,7 @@ The next batch of service functions we will review are related to how inference 
         - It returns the output results and file type strings.
     - If any errors occur during the process or if the inference type is not supported, it logs an error message and returns `None`.
     
-6. `**submit_inference_request_to_groq_api**`:
+6. **`submit_inference_request_to_groq_api`**:
     - This function is responsible for submitting inference requests to the Groq API for text completion and embedding tasks.
     - For "text_completion" requests:
         - It extracts the model parameters, input prompt, and number of completions from the `inference_request` object.
@@ -1501,7 +1501,7 @@ The next batch of service functions we will review are related to how inference 
         - It returns the output results and file type strings.
     - If any errors occur during the process or if the inference type is not supported, it logs an error message and returns `None`.
     
-7. `**submit_inference_request_to_claude_api**`:
+7. **`submit_inference_request_to_claude_api`**:
     - This function is responsible for submitting inference requests to the Claude API (by Anthropic) for text completion and embedding tasks.
     - It uses the `get_claude3_model_name` helper function to map the model name from the `inference_request` to the corresponding Claude API model name.
     - For "text_completion" requests:
@@ -1541,7 +1541,7 @@ These functions also ensure that the output results are properly formatted and r
 These functions are responsible for submitting the inference requests to the Swiss Army Llama service, handling the responses, and processing the output results. Let's go through each function and explain their purpose and how they contribute to the execution of inference requests:
 
 
-1. `**determine_swiss_army_llama_port**`:
+1. **`determine_swiss_army_llama_port`**:
     - This function determines the appropriate port to use for communicating with the Swiss Army Llama service.
     - It checks if the local Swiss Army Llama service is responding using the `is_swiss_army_llama_responding` function with the `local` parameter set to `True`.
     - If the `USE_REMOTE_SWISS_ARMY_LLAMA_IF_AVAILABLE` configuration is set to `True`, it also checks if the remote Swiss Army Llama service is responding by calling `is_swiss_army_llama_responding` with `local` set to `False`.
@@ -1550,7 +1550,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If neither service is responding, it returns `None`.
     - This function helps in selecting the appropriate port based on the availability and configuration of the Swiss Army Llama services.
     
-2. `**handle_swiss_army_llama_exception**`:
+2. **`handle_swiss_army_llama_exception`**:
     - This is an exception handling function specific to Swiss Army Llama requests.
     - It takes the exception object `e`, the `client` instance, the `inference_request`, `model_parameters`, `port`, `is_fallback` flag, and the `handler_function` as parameters.
     - If the exception occurs while using the remote Swiss Army Llama service (indicated by the `port` being `REMOTE_SWISS_ARMY_LLAMA_MAPPED_PORT`) and it's not a fallback attempt, the function logs a message indicating a fallback to the local Swiss Army Llama service.
@@ -1558,7 +1558,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If the exception occurs in any other scenario, it returns `None` for both the output results and file type strings.
     - This function provides a mechanism to handle exceptions during Swiss Army Llama requests and fallback to the local service if necessary.
     
-3. `**handle_swiss_army_llama_text_completion**`:
+3. **`handle_swiss_army_llama_text_completion`**:
     - This function handles text completion requests using the Swiss Army Llama service.
     - It takes the `client` instance, `inference_request`, `model_parameters`, `port`, and `is_fallback` flag as parameters.
     - It constructs the payload for the text completion request, including the input prompt, LLM model name, temperature, number of tokens to generate, number of completions to generate, and grammar file string.
@@ -1568,7 +1568,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If an exception occurs during the request, it calls the `handle_swiss_army_llama_exception` function to handle the exception and potentially fallback to the local service.
     - It returns the output text and file type strings.
     
-4. `**handle_swiss_army_llama_image_question**`:
+4. **`handle_swiss_army_llama_image_question`**:
     - This function handles image question requests using the Swiss Army Llama service.
     - It takes the `client` instance, `inference_request`, `model_parameters`, `port`, and `is_fallback` flag as parameters.
     - It extracts the image data and question from the input data, which is assumed to be base64-encoded JSON.
@@ -1579,7 +1579,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If an exception occurs during the request, it calls the `handle_swiss_army_llama_exception` function to handle the exception and potentially fallback to the local service.
     - It returns the output text and file type strings.
     
-5. `**handle_swiss_army_llama_embedding_document**`:
+5. **`handle_swiss_army_llama_embedding_document`**:
     - This function handles document embedding requests using the Swiss Army Llama service.
     - It takes the `client` instance, `inference_request`, `model_parameters`, `port`, and `is_fallback` flag as parameters.
     - It extracts the document file data from the input data, which is assumed to be base64-encoded JSON.
@@ -1592,7 +1592,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If an exception occurs during the request, it calls the `handle_swiss_army_llama_exception` function to handle the exception and potentially fallback to the local service.
     - It returns the output results and file type strings.
     
-6. `**handle_swiss_army_llama_embedding_audio**`:
+6. **`handle_swiss_army_llama_embedding_audio`**:
     - This function handles audio embedding requests using the Swiss Army Llama service.
     - It takes the `client` instance, `inference_request`, `model_parameters`, `port`, and `is_fallback` flag as parameters.
     - It extracts the audio file data from the input data, which is assumed to be base64-encoded JSON.
@@ -1605,7 +1605,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If an exception occurs during the request, it calls the `handle_swiss_army_llama_exception` function to handle the exception and potentially fallback to the local service.
     - It returns the output results and file type strings.
     
-7. `**handle_swiss_army_llama_semantic_search**`:
+7. **`handle_swiss_army_llama_semantic_search`**:
     - This function handles semantic search requests using the Swiss Army Llama service.
     - It takes the `client` instance, `inference_request`, `model_parameters`, `port`, and `is_fallback` flag as parameters.
     - It constructs the payload for the semantic search request, including the query text, number of most similar strings to return, LLM model name, embedding pooling method, and corpus identifier string.
@@ -1614,7 +1614,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If an exception occurs during the request, it calls the `handle_swiss_army_llama_exception` function to handle the exception and potentially fallback to the local service.
     - It returns the output results and file type strings.
     
-8. `**handle_swiss_army_llama_advanced_semantic_search**`:
+8. **`handle_swiss_army_llama_advanced_semantic_search`**:
     - This function handles advanced semantic search requests using the Swiss Army Llama service.
     - It takes the `client` instance, `inference_request`, `model_parameters`, `port`, and `is_fallback` flag as parameters.
     - It constructs the payload for the advanced semantic search request, including the query text, LLM model name, embedding pooling method, corpus identifier string, similarity filter percentage, number of most similar strings to return, and result sorting metric.
@@ -1623,7 +1623,7 @@ These functions are responsible for submitting the inference requests to the Swi
     - If an exception occurs during the request, it calls the `handle_swiss_army_llama_exception` function to handle the exception and potentially fallback to the local service.
     - It returns the output results and file type strings.
     
-9. `**submit_inference_request_to_swiss_army_llama**`:
+9. **`submit_inference_request_to_swiss_army_llama`**:
     - This is the main function for submitting inference requests to the Swiss Army Llama service.
     - It takes the `inference_request` and an optional `is_fallback` flag as parameters.
     - It determines the appropriate port for the Swiss Army Llama service using the `determine_swiss_army_llama_port` function.
@@ -1658,7 +1658,7 @@ Overall, these functions enable the Pastel Inference Layer to seamlessly integra
 The final batch of service functions we will review are related to the overall execution of inference requests, checking the status of inference results, and retrieving the output results while verifying authorization. These functions tie together the various components of the inference request flow and provide the necessary endpoints for users to interact with the system. Let's go through each function and explain their purpose and how they contribute to the inference request execution and result retrieval process:
 
 
-1. `**execute_inference_request**`:
+1. **`execute_inference_request`**:
     - This is the main function responsible for executing an inference request.
     - It takes the `inference_request_id` as a parameter, which uniquely identifies the inference request.
     - It retrieves the corresponding `InferenceAPIUsageRequest` from the database using the provided `inference_request_id`.
@@ -1677,7 +1677,7 @@ The final batch of service functions we will review are related to the overall e
     - If the `output_results` and `output_results_file_type_strings` are not `None`, it calls the `save_inference_output_results` function to save the inference output results to the database.
     - If any exception occurs during the execution process, it logs the error, prints the traceback, and re-raises the exception.
     
-2. `**check_status_of_inference_request_results**`:
+2. **`check_status_of_inference_request_results`**:
     - This function checks the status of an inference request's results.
     - It takes the `inference_response_id` as a parameter, which uniquely identifies the inference response.
     - It retrieves the corresponding `InferenceAPIOutputResult` from the database using the provided `inference_response_id`.
@@ -1685,7 +1685,7 @@ The final batch of service functions we will review are related to the overall e
     - If the `InferenceAPIOutputResult` is not found, it means the inference request is still being processed or has not yet started, so the function returns `False`.
     - If any exception occurs during the status check, it logs the error and re-raises the exception.
     
-3. `**get_inference_output_results_and_verify_authorization**`:
+3. **`get_inference_output_results_and_verify_authorization`**:
     - This function retrieves the inference output results and verifies the authorization of the requesting user.
     - It takes the `inference_response_id` and `requesting_pastelid` as parameters.
     - It retrieves the corresponding `InferenceAPIOutputResult` from the database using the provided `inference_response_id`.
@@ -1722,13 +1722,13 @@ https://github.com/pastelnetwork/python_inference_layer_server/blob/master/setup
 The `setup_swiss_army_llama.py` file contains various utility functions and a main function `check_and_setup_swiss_army_llama` that orchestrates the entire setup process. Let's go through each function and explain their purpose and how they contribute to setting up and managing the Swiss Army Llama service:
 
 
-1. `**get_external_ip_func**`:
+1. **`get_external_ip_func`**:
     - This function attempts to retrieve the external IP address of the server by querying several public IP address providers.
     - It iterates through a list of providers and sends HTTP GET requests to each provider until a successful response is received.
     - If a provider returns a valid IP address, the function returns it.
     - If all providers fail to provide an IP address, the function returns "Unknown".
     
-2. `**run_command**`:
+2. `run_command`:
     - This function is a wrapper around the `subprocess.run` function to execute shell commands.
     - It takes the command as a string or a list of command arguments, along with optional parameters for environment variables, output capture, error checking, and timeout.
     - It uses the default shell (`/bin/zsh` if available, otherwise `/bin/bash`) to execute the command.
