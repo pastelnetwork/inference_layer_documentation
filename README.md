@@ -897,7 +897,7 @@ The next group of service functions we will review are related to how Supernodes
 
 
 - **`get_inference_model_menu`**:
-****    - This function is responsible for retrieving the inference model menu, which contains information about the available models and their supported parameters.
+    - This function is responsible for retrieving the inference model menu, which contains information about the available models and their supported parameters.
     - It first loads the API key test results from a file using the `load_api_key_tests` function.
     - It then fetches the latest model menu from a GitHub URL using an asynchronous HTTP client.
     - The function filters the model menu based on the availability of valid API keys for each model provider (e.g., Stability, OpenAI, Mistral, Groq, Anthropic, OpenRouter).
@@ -1722,7 +1722,7 @@ https://github.com/pastelnetwork/python_inference_layer_server/blob/master/setup
 The `setup_swiss_army_llama.py` file contains various utility functions and a main function `check_and_setup_swiss_army_llama` that orchestrates the entire setup process. Let's go through each function and explain their purpose and how they contribute to setting up and managing the Swiss Army Llama service:
 
 
-1. **`get_external_ip_func`**:
+1. `get_external_ip_func`:
     - This function attempts to retrieve the external IP address of the server by querying several public IP address providers.
     - It iterates through a list of providers and sends HTTP GET requests to each provider until a successful response is received.
     - If a provider returns a valid IP address, the function returns it.
@@ -1854,7 +1854,7 @@ The `.env` file contains a wide range of configuration settings, covering aspect
 
 You can see the sample .env file below. Not that the very long values are actually encrypted secrets that rely upon the existence of a saved decryption key stored somewhere on the machine:
 
-```dockerfile
+```Dockerfile
     UVICORN_PORT=7123
     TEMP_OVERRIDE_LOCALHOST_ONLY=1
     CHALLENGE_EXPIRATION_TIME_IN_SECONDS=300
