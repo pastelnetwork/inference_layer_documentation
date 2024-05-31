@@ -79,7 +79,7 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
 
 1) First the end user picks a certain Supernode from the list ofSupernodes (the one whose pastelid has XOR distance closest to the best block hash on pastel now; call this Supernode the `responding_supernode`) and requests to purchase an credit pack ticket for a certain price using this message that is sent via a POST to the `/credit_purchase_initial_request` endpoint:
 
-
+```python
     class CreditPackPurchaseRequest(SQLModel, table=True):
         id: uuid.UUID = Field(default_factory=uuid.uuid4, index=True, nullable=True)
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
@@ -91,11 +91,11 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
         request_pastel_block_height: int
         credit_purchase_request_message_version_string: str
         requesting_end_user_pastelid_signature_on_request_hash: str
-
+```
 
 2) The `responding_supernode` evaluates the message from the end user to check that all fields are valid. If anything in the request is invalid, then it responds to the POST request to the `/credit_purchase_initial_request` endpoint with a rejection message:
 
-
+```python
     class CreditPackPurchaseRequestRejection(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
         credit_pack_purchase_request_fields_json_b64: str
@@ -106,10 +106,11 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
         responding_supernode_pastelid: str = Field(index=True)
         sha3_256_hash_of_credit_pack_purchase_request_rejection_fields: str = Field(unique=True, index=True)
         responding_supernode_signature_on_credit_pack_purchase_request_rejection_hash: str
+```
 
 3) If the purchase request message fields are all valid, then the `responding_supernode` first determines the best price (in PSL per credit) that they would be willing to accept for the credit pack. To avoid wasting time and communication overhead, this preliminary price quote (preliminary because it is not considered valid by the network until it has been agreed to by enough other Supernodes) is first sent to the end user to determine if the end user is willing to agree to the quoted price (since if the end user doesn't like the price or doesn't have enough PSL to buy the credit pack for the total price, then there is no point in continuing any further). So in that case the POST request from the end user is responded to with this message:
 
-
+```python
     class CreditPackPurchaseRequestPreliminaryPriceQuote(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
         credit_usage_tracking_psl_address: str = Field(index=True)
@@ -122,10 +123,11 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
         responding_supernode_pastelid: str = Field(index=True)
         sha3_256_hash_of_credit_pack_purchase_request_preliminary_price_quote_fields: str = Field(unique=True, index=True)
         responding_supernode_signature_on_credit_pack_purchase_request_preliminary_price_quote_hash: str
+```
 
 4) The user then calls another endpoint on the`responding_supernode` (the `/credit_purchase_preliminary_price_quote_response` endpoint) to POST their response to the preliminary price quote with this message:
 
-
+```python
     class CreditPackPurchaseRequestPreliminaryPriceQuoteResponse(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
         sha3_256_hash_of_credit_pack_purchase_request_preliminary_price_quote_fields: str = Field(index=True)
@@ -139,10 +141,11 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
         requesting_end_user_pastelid: str = Field(index=True)
         sha3_256_hash_of_credit_pack_purchase_request_preliminary_price_quote_response_fields: str = Field(unique=True, index=True)
         requesting_end_user_pastelid_signature_on_preliminary_price_quote_response_hash: str
+```
 
 5) If the end user rejects the price quote (i.e., `agree_with_preliminary_price_quote` is false), then the process terminates now. The end user can repeat the process on the next block to try with a new `responding_supernode` that might be willing to accept a lower price. If the end user accepts the preliminary price quote (i.e., `agree_with_preliminary_price_quote` is true), then the `/credit_purchase_preliminary_price_quote_response` endpoint on the `responding_supernode` must now determine if enough other supernodes in the pastel network agree with the pricing it proposed to the end user. The `responding_supernode` does this by selecting the 12 supernodes whose hash(pastelid) has XOR distance closest to the best pastel block's merkle root; collectively these are known as the `potentially_agreeing_supernodes`. The `responding_supernode` calls a REST endpoint on each of the potentially_agreeing_supernodes called the `/credit_pack_price_agreement_request` endpoint and POSTs a message of the form:
 
-
+```python
     class CreditPackPurchasePriceAgreementRequest(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sha3_256_hash_of_credit_pack_purchase_request_response_fields: str = Field(index=True)
@@ -155,10 +158,11 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
         price_agreement_request_message_version_string: str
         sha3_256_hash_of_price_agreement_request_fields: str = Field(index=True)
         supernode_requesting_price_agreement_pastelid_signature_on_request_hash: str
+```
 
 6) Each of the `potentially_agreeing_supernodes` checks all the fields of the message, including the fields of the related messages (i.e., `credit_pack_purchase_request_response_fields_json`) to determine if all fields and signatures are valid so far. Then it determines if it is willing to go along with the quoted credit pricing proposed by the `responding_supernode`. It does this by responding to the POST request to `/credit_purchase_preliminary_price_quote_response` endpoint with the following message structure:
 
-
+```python
     class CreditPackPurchasePriceAgreementRequestResponse(SQLModel, table=True):
         sha3_256_hash_of_price_agreement_request_fields: str = Field(primary_key=True, index=True)
         credit_pack_purchase_request_fields_json_b64: str
@@ -172,19 +176,21 @@ Now, let’s introduce the actual flow for a user to request the creation of a n
         responding_supernode_pastelid: str = Field(index=True)
         sha3_256_hash_of_price_agreement_request_response_fields: str = Field(unique=True, index=True)
         responding_supernode_signature_on_price_agreement_request_response_hash: str
+```
 
 7) The `responding_supernode` waits for as many of the `potentially_agreeing_supernodes` to respond as possible in a set period of time (say, 30 seconds) and then aggregates all of their responses for processing. It counts up the number of valid responses received (the `valid_price_agreement_request_responses` from all of the `potentially_agreeing_supernodes` and computes
 `(len(valid_price_agreement_request_responses)/len(potentially_agreeing_supernodes))` and checks that this result exceeds `0.51`. If it does not, then the entire process terminates now and the `responding_supernode` prepares a message for the end user for the next time the end user calls the REST endpoint `/check_status_of_credit_purchase_request` on the `responding_supernode`; first the end user POSTs the message:
 
-
+```python
     class CreditPackRequestStatusCheck(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
         requesting_end_user_pastelid: str = Field(index=True)
         requesting_end_user_pastelid_signature_on_sha3_256_hash_of_credit_pack_purchase_request_fields: str
+```
 
 and in the case of a termination, the `responding_supernode` responds with this message detailing why the request failed (in this case because not enough of the `potentially_agreeing_supernodes` responded in time with a valid response to the `responding_supernode`):
 
-
+```python
     class CreditPackPurchaseRequestResponseTermination(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
         credit_pack_purchase_request_fields_json_b64: str
@@ -195,10 +201,11 @@ and in the case of a termination, the `responding_supernode` responds with this 
         responding_supernode_pastelid: str = Field(index=True)
         sha3_256_hash_of_credit_pack_purchase_request_termination_fields: str = Field(unique=True, index=True)
         responding_supernode_signature_on_credit_pack_purchase_request_termination_hash: str
+```
 
 8) If enough of the `potentially_agreeing_supernodes` respond in time with valid responses, the next step is for the `responding_supernode` to tally up the responses to determine the number of `potentially_agreeing_supernodes agree` to the quoted credit price; call them the `agreeing_supernodes`. If `len(agreeing_supernodes)/len(valid_price_agreement_request_responses)` exceeds `0.85` then the price quote is deemed to be valid by the network as a whole. If `len(agreeing_supernodes)/len(valid_price_agreement_request_responses)` is LESS than `0.85`, then the entire process terminates, and when the end user next calls the `responding_supernode`'s `/check_status_of_credit_purchase_request` endpoint, the `responding_supernode` will again respond with a `CreditPackPurchaseRequestResponseTermination` (but now the `termination_reason_string` field will explain that the request terminated for a different reason— because not enough of the other Supernodes agreed to the proposed pricing). But if enough of them agreed to the pricing so that the propose credit pack is deemed to be valid by the network, then the `responding_supernode responds` with this message the next time the end user calls its `/check_status_of_credit_purchase_request` endpoint:
 
-
+```python
     class CreditPackPurchaseRequestResponse(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(foreign_key="creditpackpurchaserequest.sha3_256_hash_of_credit_pack_purchase_request_fields", index=True)
@@ -215,12 +222,12 @@ and in the case of a termination, the `responding_supernode` responds with this 
         agreeing_supernodes_signatures_dict: str = Field(sa_column=Column(JSON))
         sha3_256_hash_of_credit_pack_purchase_request_response_fields: str = Field(unique=True, index=True)
         responding_supernode_signature_on_credit_pack_purchase_request_response_hash: str
-
+```
 , and the `responding_supernode` will also call the `/credit_pack_purchase_request_final_response_accouncement` endpoint on each of the `agreeing_supernodes` and will also POST the same `CreditPackPurchaseRequestResponse` message so that all of the `agreeing_supernodes` know all the details of the ticket.
 
 9) At this point, the deal is agreed to in all particulars, and all that is left is for the end user to actually burn `proposed_total_cost_of_credit_pack_in_psl` PSL coins by sending exactly this many coins to the burn address from the end user's `credit_usage_tracking_psl_address` within 50 blocks of `request_response_pastel_block_height`. Once the end user does this, the transaction's UTXO is then communicated to the responding_supernode by the end user calling the responding_supernode's `/confirm_credit_purchase_request` endpoint by POSTing a message of the form:
 
-
+```python
     class CreditPackPurchaseRequestConfirmation(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(foreign_key="creditpackpurchaserequest.sha3_256_hash_of_credit_pack_purchase_request_fields", index=True)
@@ -233,6 +240,7 @@ and in the case of a termination, the `responding_supernode` responds with this 
         credit_purchase_request_confirmation_message_version_string: str
         sha3_256_hash_of_credit_pack_purchase_request_confirmation_fields: str = Field(unique=True, index=True)
         requesting_end_user_pastelid_signature_on_sha3_256_hash_of_credit_pack_purchase_request_confirmation_fields: str
+```
 
 The end user also calls the `/credit_pack_purchase_completion_announcement` endpoint on each of the `agreeing_supernodes` and POSTs the same `CreditPackPurchaseRequestConfirmation` message to them to let them know that the payment was sent.
 
@@ -240,19 +248,21 @@ The end user also calls the `/credit_pack_purchase_completion_announcement` endp
 
 Essentially, this combined data is a nested JSON string that contains within it the JSON serialized messages for `CreditPackPurchaseRequest`, `CreditPackPurchaseRequestResponse`, and `CreditPackPurchaseRequestConfirmation`, which between them contain all the many salient pieces of information that are required to fully validate the legitimacy of the credit pack ticket— even by a newly joined Supernode that wasn’t around when the original credit pack was purchase and so never directly saw any of the many announcement messages that would have been sent to it if it were part of the network when the credit pack ticket was originally created. The process of writing this data to the blockchain, which is done by storing the Z-standard compressed JSON data in the form of Pay2FakeMultiSig coin transactions, is now completely handled within pasteld itself using a new RPC method, which is access in the Python Inference server code like this:
 
-
+```python
     ticket_register_command_response = await rpc_connection.tickets('register', 'contract', ticket_json_b64, ticket_type_identifier, ticket_input_data_fully_parsed_sha3_256_hash)
+```
 
 This command returns a single Pastel TXID which uniquely picks out the credit pack ticket and is the primary way we refer to the completed credit pack ticket for all future operations (note that, of course, this TXID is itself not in the credit pack data, since that would create a “chicken and egg” problem.) For example, if we want to retrieve the credit pack from the blockchain we can use the RPC method in pasteld from Python like this and quickly parse out all the relevant data to get back a Python dict variable that has everything we’d need to fully validate the ticket contents:
 
-
+```python
     ticket_get_command_response = await rpc_connection.tickets('get', ticket_txid , 1)
+```
 
 Because it would be wasteful to constantly get data from the blockchain and parse it, we only need to do this the first time (or if there is a chain re-org or rollback, which is detected and handled automatically in the Python Inference Server code) and the parsed data is serialized and turned into records in the Supernode’s local SQLite database. This is also true for all messages that the Supernode receives from end users or other Supernodes, as well as announcement messages that are sent using the built-in Pastel Masternode messaging system; all of these are automatically added to the database for ease of querying and efficiency (this is the beauty of using SQLmodel— all messages that are sent/received are automatically validated against the model and can be losslessly turned into the underlying ORM data models from the raw JSON, and can then be inserted easily into the database without a lot of annoying and verbose conversion/ingestion code).
 
 After the ticket has been written to the blockchain successfully by the `responding_supernode`, it finally responds to the end user with this message:
 
-
+```python
     class CreditPackPurchaseRequestConfirmationResponse(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(foreign_key="creditpackpurchaserequest.sha3_256_hash_of_credit_pack_purchase_request_fields", index=True)
@@ -266,12 +276,13 @@ After the ticket has been written to the blockchain successfully by the `respond
         responding_supernode_pastelid: str = Field(index=True)
         sha3_256_hash_of_credit_pack_purchase_request_confirmation_response_fields: str = Field(unique=True, index=True)
         responding_supernode_signature_on_credit_pack_purchase_request_confirmation_response_hash: str
+```
 
 In addition, the `responding_supernode` calls the `/credit_pack_storage_completion_announcement` endpoint on all of the `agreeing_supernodes` and POSTs the same `CreditPackPurchaseRequestConfirmationResponse` message to them to let them know that the process has been successfully completed and everything is done and the credit pack ticket has been written to the blockchain correctly and is now valid and ready to be used, as well as the final TXID for the credit pack ticket.
 
 11) If, for whatever reason, the `responding_supernode` is unable or unwilling to actually store the ticket data in the blockchain, but the end user has already burned the required PSL as needed, then we still need to deal with this situation, because otherwise it's very unfair to the end user. Luckily, any of the `agreeing_supernodes` can be called upon if needed by the end user to do this. But the end user is only permitted to ask one of the `agreeing_supernodes` to do this for them if more than 10 Pastel blocks have elapsed since the `CreditPackPurchaseRequestConfirmation` was sent by the end user without the original `responding_supernode` sending the `CreditPackPurchaseRequestConfirmationResponse` to the `agreeing_supernodes`. In that case, the end user chooses the "closest" of the `agreeing_supernodes` to the end user's pastelid (i.e., the XOR distance of `hash(agreeing_supernode_pastelid)` to `hash(end_user_pastelid)` is smallest of all the `agreeing_supernodes`; call this the `closest_agreeing_supernode`) and then the end user calls the `/credit_pack_storage_retry_request` endpoint on the `closest_agreeing_supernode` and POSTs the message:
 
-
+```python
     class CreditPackStorageRetryRequest(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_response_fields: str = Field(primary_key=True, index=True)
         credit_pack_purchase_request_fields_json_b64: str
@@ -282,10 +293,11 @@ In addition, the `responding_supernode` calls the `/credit_pack_storage_completi
         credit_pack_storage_retry_request_message_version_string: str
         sha3_256_hash_of_credit_pack_storage_retry_request_fields: str
         requesting_end_user_pastelid_signature_on_credit_pack_storage_retry_request_hash: str
+```
 
 12) At this point, the `closest_agreeing_supernode` will check all the details to ensure that the retry request is valid (particularly, that the original `responding_supernode` has still not confirmed that the ticket storage took place successfully) in all respects, and if so, it will store the ticket in the Pastel blockchain itself. It can do this, including having the original `responding_supernode`'s pastelid signature on the ticket, because earlier in the process, the `responding_supernode` called the `closest_agreeing_supernode`'s `credit_pack_purchase_completion_announcement` endpoint, thus supplying all these details automatically. So now, the `closest_agreeing_supernode` simply stores that exact ticket data itself in the blockchain. When done, it responds to the end user's request to its `/credit_pack_storage_retry_request` endpoint with the following message:
 
-
+```python
     class CreditPackStorageRetryRequestResponse(SQLModel, table=True):
         sha3_256_hash_of_credit_pack_purchase_request_fields: str = Field(primary_key=True, index=True)
         sha3_256_hash_of_credit_pack_purchase_request_confirmation_fields: str
@@ -298,6 +310,7 @@ In addition, the `responding_supernode` calls the `/credit_pack_storage_completi
         closest_agreeing_supernode_to_retry_storage_pastelid: str = Field(index=True)
         sha3_256_hash_of_credit_pack_storage_retry_confirmation_response_fields: str
         closest_agreeing_supernode_to_retry_storage_pastelid_signature_on_credit_pack_storage_retry_confirmation_response_hash: str    
+```
 
 That completes the entire flow from start to finish of creating a new credit pack ticket. 
 
@@ -596,7 +609,7 @@ We now introduce the detailed flow involved in an end user creating a new infere
 1. **Initiating the Inference Request:**
     - The user creates a new inference request by sending a POST request to the `/make_inference_api_usage_request` endpoint with an `InferenceAPIUsageRequest` message, which looks like this:
 
-
+```python
     class InferenceAPIUsageRequest(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         inference_request_id: str = Field(unique=True, index=True)
@@ -612,7 +625,7 @@ We now introduce the detailed flow involved in an end user creating a new infere
         inference_request_message_version_string: str
         sha3_256_hash_of_inference_request_fields: str
         requesting_pastelid_signature_on_request_hash: str
-
+```
 
     - This message contains essential information such as the user's PastelID, the credit pack ticket TXID, the requested model, inference type, model parameters, input data, and various other details.
     - To avoid any issues with quoted JSON or escaping text, all model inputs and all model parameters are supplied as base64 encoded JSON. This also provides flexibility to work with binary inputs, such as input images for the “Ask a Question About an Image” inference requests.
@@ -631,7 +644,8 @@ We now introduce the detailed flow involved in an end user creating a new infere
         - For image generation requests, the relevant API based pricing is again used to arrive at an estimated cost in credits that should cover the Supernode owner’s operating expenses from using the relevant API for that request.
         - For “Ask a Question About an Image” requests, the relevant pricing for the API is again used, taking into account the actual resolution of the input image. 
     - Once the cost is determined, the supernode generates an `InferenceAPIUsageResponse` message, which includes the proposed cost in inference credits, the remaining credits in the user's credit pack after processing the request, and other relevant details, which looks like this:
-    
+
+```python
     class InferenceAPIUsageResponse(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         inference_response_id: str = Field(unique=True, index=True)
@@ -646,29 +660,32 @@ We now introduce the detailed flow involved in an end user creating a new infere
         inference_request_response_message_version_string: str    
         sha3_256_hash_of_inference_request_response_fields: str
         supernode_pastelid_and_signature_on_inference_request_response_hash: str
-    
+    ```
+
     - The supernode sends this response back to the user, providing them with the cost estimate for their inference request.
     
-3. **Broadcasting the Inference Request and Response:**
+2. **Broadcasting the Inference Request and Response:**
     - After sending the `InferenceAPIUsageResponse` back to the user, the responding supernode broadcasts a combined message containing both the `InferenceAPIUsageRequest` and `InferenceAPIUsageResponse` to the nearest supernodes based on the XOR distance to the user's PastelID.
     - This broadcast ensures that multiple supernodes are aware of the inference request and can assist in processing it if needed, providing redundancy and fault tolerance.
     - The broadcast message includes the original inference request details, the proposed cost, and the remaining credits in the user's credit pack.
     
-4. **Confirming the Inference Request:**
+3. **Confirming the Inference Request:**
     - Upon receiving the `InferenceAPIUsageResponse` from the responding supernode, the user reviews the proposed cost and decides whether to proceed with the inference request.
     - If the user agrees to the cost, they confirm the inference request by first sending the corresponding number Patoshis from the designated PSL tracking address to the Pastel burn address; once they do that and get a TXID for that burn transactions, they send a POST request to the `/confirm_inference_request` endpoint with an `InferenceConfirmation` message:
-    
+
+```python
     class InferenceConfirmation(SQLModel):
         inference_request_id: str
         requesting_pastelid: str
         confirmation_transaction: dict
-    
+```
+
     - The `InferenceConfirmation` message includes the inference request ID, the user's PastelID, and a confirmation transaction.
     - The confirmation transaction serves as proof that the user has agreed to the proposed cost and has authorized the deduction of the required inference credits from their credit pack. Since only the authorized creator of the credit pack would have control over the tracking address, everyone knows for sure that the request originated with the user for all intents and purposes (ignoring cases where the user got hacked, for example). 
     - Note that multiple different PastelIDs (the ones specifically listed in the original credit pack ticket data) can create and authorize inference requests from the credit pack ticket; this means that multiple users (each with their own PastelID) could in theory share a single credit pack and easily keep track of who has used what in terms of credits from the pack, but each of these would need to have the private key of the tracking address imported into their local wallet. 
     - However, since only a very tiny amount of PSL is required for the tracking transactions, this address could contain, say, 10 PSL or less, so there would be very little risk in sharing the private key, since there isn’t much PSL value to steal. Critically, even if a third party were able to get the private key to the tracking address, they still wouldn’t be able to “steal” inference requests using it unless they had ALSO stolen the PastelID private keys for one of the PastelIDs included in the list of authorized PastelIDs for that specific credit pack.
     
-5. **Executing the Inference Request:**
+4. **Executing the Inference Request:**
     - Once the `responding_supernode` receives the `InferenceConfirmation` from the user, it proceeds to process and execute the inference request.
     - The Supernode verifies the confirmation transaction to ensure that the user has authorized the deduction of the inference credits.
     - If the confirmation is valid, the Supernode begins executing the inference request using the specified model and parameters.
@@ -681,10 +698,10 @@ We now introduce the detailed flow involved in an end user creating a new infere
     - During the execution process, the Supernode may need to communicate with external APIs or services, depending on the requested model/service.
     - The Supernode monitors the progress of the inference execution and handles any errors or exceptions that may occur.
     
-6. **Generating the Inference Output Result:**
+5. **Generating the Inference Output Result:**
     - Once the inference execution is completed, the `responding_supernode` generates an `InferenceAPIOutputResult` message, which looks like this:
 
-
+```python
     class InferenceAPIOutputResult(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         inference_result_id: str = Field(unique=True, index=True)
@@ -698,21 +715,21 @@ We now introduce the detailed flow involved in an end user creating a new infere
         inference_result_message_version_string: str    
         sha3_256_hash_of_inference_result_fields: str    
         responding_supernode_signature_on_inference_result_id: str
-
+```
 
     - This message contains the inference result ID, the original inference request ID, the inference response ID, the `responding_supernode`'s PastelID, and the actual inference output data.
     - The inference output data is serialized and stored in the `inference_result_json_base64` field as a base64-encoded JSON string.
     - The Supernode also includes the file type of the inference output (e.g., JSON, text, image) in the `inference_result_file_type_strings` field.
     - The Supernode signs the hash of the inference result fields using its PastelID to ensure the integrity and authenticity of the output.
     
-7. **Checking the Status of Inference Request Results:**
+6. **Checking the Status of Inference Request Results:**
     - The user can check the status of their inference request by sending a GET request to the `/check_status_of_inference_request_results/{inference_response_id}` endpoint.
     - The endpoint expects the `inference_response_id` as a path parameter, which uniquely identifies the inference response associated with the user's request.
     - The `responding_supernode` receives the status check request and verifies that the `inference_response_id` exists and is associated with the requesting user.
     - If the inference request is still being processed, the Supernode responds with a status indicating that the results are not yet available.
     - If the inference request has been completed, the Supernode responds with a status indicating that the results are ready for retrieval.
     
-8. **Retrieving the Inference Output Results:**
+7. **Retrieving the Inference Output Results:**
     - When the inference results are available, the user can retrieve them by sending a POST request to the `/retrieve_inference_output_results` endpoint.
     - The user provides the `inference_response_id`, their PastelID, and a challenge-response signature for authentication purposes.
     - The `responding_supernode` verifies the user's authentication by checking the provided PastelID and challenge-response signature.
@@ -721,7 +738,7 @@ We now introduce the detailed flow involved in an end user creating a new infere
     - Additionally, the Supernode broadcasts the `InferenceAPIOutputResult` to the nearest Supernodes based on the XOR distance to the user's PastelID.
     - This broadcast ensures that multiple Supernodes have a record of the inference output and can provide the results to the user if the original `responding_supernode` becomes unavailable.
     
-9. **Auditing the Inference Request Response:**
+8. **Auditing the Inference Request Response:**
     - The user has the option to audit the inference request response by sending a POST request to the `/audit_inference_request_response` endpoint.
     - The user provides the `inference_response_id`, their PastelID, and a signature to prove their identity and authorization.
     - The `responding_supernode` verifies the user's signature and checks if the provided PastelID matches the one associated with the inference request.
@@ -729,7 +746,7 @@ We now introduce the detailed flow involved in an end user creating a new infere
     - The Supernode returns the `InferenceAPIUsageResponse` to the user, allowing them to review the details of the inference request response, such as the proposed cost and remaining credits.
     - This audit process provides transparency and allows the user to verify that the inference request was processed correctly and that the appropriate amount of credits were deducted from their credit pack.
     
-10. **Auditing the Inference Request Result:**
+9. **Auditing the Inference Request Result:**
     - Similar to auditing the inference request response, the user can also audit the inference request result by sending a POST request to the `/audit_inference_request_result` endpoint.
     - The user provides the `inference_response_id`, their PastelID, and a signature for authentication and authorization.
     - The `responding_supernode` verifies the user's signature and checks if the provided PastelID matches the one associated with the inference request.
@@ -801,7 +818,7 @@ The data models used to support these functions are defined using SQLModel, whic
 
 - `Message` - Represents a message exchanged between Supernodes:
 
-
+```python
     class Message(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sending_sn_pastelid: str = Field(index=True)
@@ -812,22 +829,22 @@ The data models used to support these functions are defined using SQLModel, whic
         message_body: str = Field(sa_column=Column(JSON))
         signature: str
         timestamp: datetime = Field(default_factory=lambda: datetime.now(dt.UTC), index=True)
-
+```
 
 - `MessageMetadata` - Tracks the overall total messages, senders, and receivers in the system:
 
-
+```python
     class MessageMetadata(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         total_messages: int
         total_senders: int
         total_receivers: int
         timestamp: datetime = Field(default_factory=lambda: datetime.now(dt.UTC), index=True)
-
+```
 
 - `MessageSenderMetadata` - Tracks the total messages sent and data sent by each sending supernode:
 
-
+```python
     class MessageSenderMetadata(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sending_sn_pastelid: str = Field(index=True)
@@ -836,11 +853,11 @@ The data models used to support these functions are defined using SQLModel, whic
         total_messages_sent: int
         total_data_sent_bytes: float
         timestamp: datetime = Field(default_factory=lambda: datetime.now(dt.UTC), index=True)
-
+```
 
 - `MessageReceiverMetadata` - Tracks the total messages received and data received by each receiving supernode:
 
-
+```python
     class MessageReceiverMetadata(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         receiving_sn_pastelid: str = Field(index=True)
@@ -848,11 +865,11 @@ The data models used to support these functions are defined using SQLModel, whic
         total_messages_received: int
         total_data_received_bytes: float
         timestamp: datetime = Field(default_factory=lambda: datetime.now(dt.UTC), index=True)
-
+```
 
 - `MessageSenderReceiverMetadata` - Tracks the total messages and data exchanged between each pair of sending and receiving Supernodes:
 
-
+```python
     class MessageSenderReceiverMetadata(SQLModel, table=True):
         id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
         sending_sn_pastelid: str = Field(index=True)
@@ -860,6 +877,7 @@ The data models used to support these functions are defined using SQLModel, whic
         total_messages: int
         total_data_bytes: float
         timestamp: datetime = Field(default_factory=lambda: datetime.now(dt.UTC), index=True)
+```
 
 These models work together with the functions to facilitate the processing of inference requests, broadcasting of messages, and handling of received broadcast messages in the Inference Layer server. They enable the Supernodes to communicate and coordinate effectively, ensuring that inference requests are properly processed and the necessary information is stored and tracked in the database.
 
@@ -928,19 +946,20 @@ These functions work together to manage the inference model menu and ensure that
 
 It also allows Supernodes to accurately advertise the specific models and services they support. This allows the Inference Layer to provide a lot more options to users without introducing necessary centralization, since Supernode Operators are free to decide which API based services, if any, they want to support with their own Supernodes; if they do want to support a particular API service, such as *OpenAI* or *Groq*, then it’s totally up to the Supernode operators themselves to procure a valid API key and include it in their .env file in encrypted form. The result of all this are exposed by each Supernode at the following endpoint:
 
-
+```python
     @router.get("/get_inference_model_menu")
     async def get_inference_model_menu_endpoint(
         rpc_connection=Depends(get_rpc_connection),
     ):
         model_menu = await service_functions.get_inference_model_menu()
         return model_menu 
+```
 
 which sends back the filtered model menu after removing any entries in the master model_menu.json that the particular Supernode doesn’t support. For instance, if that particular Supernode is controlled by a Supernode operator who never bothered to get a Stability API key, then the returned model menu from that Supernode will not include the “text_to_image” inference type and associated Stability models; if an end user wants to use that inference type, they will need to select a different Supernode as their closest model-supporting `responding_supernode`.
 
 To really understand how the `model_menu.json`  file works and its importance in the wider system, we need to go into a lot more detail. For starters, here is what the beginning of this file looks like:
 
-
+```js
     {
       "models": [
         {
@@ -1031,10 +1050,10 @@ To really understand how the `model_menu.json`  file works and its importance in
             }
           }
         },
-
+```
 Compare the above entry for a “locally hosted” Swiss Army Llama based LLM to the entry below for an API service based model, which has fewer options to specify and which uses a very different approach to calculating the cost of a specific inference request (the API service based models try to estimate the actual cost to the Supernode operator of making that particular inference request, whereas the Swiss Army Llama based models instead try to quantify the compute/memory usage of a particular inference request):
 
-
+```js
         {
           "model_name": "openai-gpt-4o",
           "model_url": "",
@@ -1083,10 +1102,11 @@ Compare the above entry for a “locally hosted” Swiss Army Llama based LLM to
             "api_based_pricing": 1
           }
         }, 
+```
 
 Or for an image generation (“text_to_image” inference type) model’s entry, which specifies wildly different input parameters and output type (a binary image encoded as base64 text rather than a plain text output like you would get from an LLM model doing a text_completion inference request):
 
-
+```js
      {
           "model_name": "stability-core",
           "model_url": "",
@@ -1150,6 +1170,7 @@ Or for an image generation (“text_to_image” inference type) model’s entry,
             "api_based_pricing": 1
           }
         },
+```
 
 As you can probably see from the examples, the structure is quite generic and covers all the functionality we might need from any kind of model, with clear methods indicated for how to expand the coverage to new and different inference types, services, and models. The `model_menu.json` file plays a crucial role in the Inference Layer server code. It serves as a central configuration file that defines the available models, their capabilities, and the parameters they support for different inference types. The file is designed to be flexible and extensible, allowing easy addition of new models and services without requiring significant changes to the codebase.
 
@@ -1833,7 +1854,7 @@ The `.env` file contains a wide range of configuration settings, covering aspect
 
 You can see the sample .env file below. Not that the very long values are actually encrypted secrets that rely upon the existence of a saved decryption key stored somewhere on the machine:
 
-
+```dockerfile
     UVICORN_PORT=7123
     TEMP_OVERRIDE_LOCALHOST_ONLY=1
     CHALLENGE_EXPIRATION_TIME_IN_SECONDS=300
@@ -1876,6 +1897,7 @@ You can see the sample .env file below. Not that the very long values are actual
     LOCAL_PASTEL_ID_PASSPHRASE=gAAAAABmEFF72YuPdwL_cNZSu54NLVxiT9s6QwGpUn0dnHoBbHRq7T-vK_vAuBV0HFrpnlquzxrmknsYKuaiWktTjOSH4knDnA%3D%3D
     MY_LOCAL_PASTELID=jXYdog1FfN1YBphHrrRuMVsXT76gdfMTvDBo2aJyjQnLdz2HWtHUdE376imdgeVjQNK93drAmwWoc7A3G4t2Pj
     MY_PASTELID_PASSPHRASE=gAAAAABmEFF7yMxMmyz4xaSa7ykie-487B42GOgzlR0HGa0K08M7Ow3DZHNt6W46M_SQQQaKtFMM-OTVJDIE51AQh4CBchmU1g%3D%3D
+```
 
 The use of environment variables allows for flexible configuration of the server without the need to modify the codebase directly. It also enables easy management of different configurations for various environments (e.g., development, staging, production).
 
@@ -1965,7 +1987,7 @@ The Dockerfile performs the following steps:
 
 The resulting Docker image is published on Docker Hub at `https://hub.docker.com/repository/docker/jemanuel82/vastai_swiss_army_llama_template/general`, making it easily accessible for deployment. The exact Dockerfile contents is shown below:
 
-
+```bash
     # Use the PyTorch image with CUDA and cuDNN pre-installed
     FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-devel
     
@@ -2028,7 +2050,7 @@ The resulting Docker image is published on Docker Hub at `https://hub.docker.com
     
     # Start benchmark, Redis, and swiss_army_llama server when the container starts
     CMD /swiss_army_llama/benchmark.sh && service redis-server start && python /swiss_army_llama/swiss_army_llama.py
-    
+```
 
 
 To utilize this GPU-enabled Swiss Army Llama instance, users can leverage the Vast.ai platform. Vast.ai is a decentralized marketplace that allows individuals to rent out their spare GPU capacity at affordable rates. Users can spin up a powerful machine with a 4090 GPU and ample RAM for as low as 34 cents per hour, significantly lower than traditional cloud providers like AWS, Azure, or Lambda. It’s sort of like the “UberX” of GPU cloud instance providers, with a disruptive and compelling business model. 
@@ -2048,23 +2070,24 @@ To get started with Vast.ai, users need to follow these steps:
 
 6. Once connected to the instance, navigate to the Swiss Army Llama directory and start the server:
 
-
+```bash
     cd /swiss_army_llama/ 
     git update python swiss_army_llama.py
     cd /swiss_army_llama/ git update python swiss_army_llama.py
-
+```
 
 7. This will initiate the process of downloading the default Swiss Army Llama model files from Hugging Face.
 
 To integrate the remote Swiss Army Llama instance with the local Supernode inference servers, users need to add the following optional fields to their `.env` file:
 
-
+```ini
     USE_REMOTE_SWISS_ARMY_LLAMA_IF_AVAILABLE=1
     REMOTE_SWISS_ARMY_LLAMA_INSTANCE_SSH_KEY_PATH=/home/ubuntu/vastai_privkey
     REMOTE_SWISS_ARMY_LLAMA_INSTANCE_IP_ADDRESS=106.185.159.136
     REMOTE_SWISS_ARMY_LLAMA_INSTANCE_PORT=20765
     REMOTE_SWISS_ARMY_LLAMA_EXPOSED_PORT=8089
     REMOTE_SWISS_ARMY_LLAMA_MAPPED_PORT=8087
+```
 
 With these configurations in place, the Pastel Inference Layer server will automatically detect the availability of the remote Swiss Army Llama instance and establish an SSH tunnel to the Vast.ai machine. If the connection is successful, all Swiss Army Llama requests from the Supernode inference servers will be routed to the associated remote GPU-enabled instance.
 This setup offers several benefits:
