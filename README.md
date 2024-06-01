@@ -1894,6 +1894,7 @@ The complete playbook is shown below, with explanation to follow:
     rust_install_script: "https://sh.rustup.rs"
     atuin_install_script: "https://setup.atuin.sh"
     zshrc_path: "/home/{{ ubuntu_user }}/.zshrc"
+    bashrc_path: "/home/{{ ubuntu_user }}/.bashrc"
     oh_my_zsh_install_flag: "/home/{{ ubuntu_user }}/.oh-my-zsh"
     home_dir: "/home/{{ ubuntu_user }}"
     
@@ -1978,7 +1979,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Set pyenv environment variables in .zshrc if zsh is found
       blockinfile:
-        path: '{{ home_dir }}/.zshrc'
+        path: '{{ zshrc_path }}'
         block: |
           export PYENV_ROOT="$HOME/.pyenv"
           export PATH="$PYENV_ROOT/bin:$PATH"
@@ -1987,7 +1988,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Set pyenv environment variables in .bashrc if zsh is not found
       blockinfile:
-        path: '{{ home_dir }}/.bashrc'
+        path: '{{ bashrc_path }}'
         block: |
           export PYENV_ROOT="$HOME/.pyenv"
           export PATH="$PYENV_ROOT/bin:$PATH"
@@ -1996,7 +1997,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Ensure pyenv is initialized in zsh
       shell: |
-        source {{ home_dir }}/.zshrc
+        source {{ zshrc_path }}
         pyenv --version
       args:
         executable: /bin/zsh
@@ -2006,7 +2007,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Ensure pyenv is initialized in bash
       shell: |
-        source {{ home_dir }}/.bashrc
+        source {{ bashrc_path }}
         pyenv --version
       args:
         executable: /bin/bash
@@ -2016,7 +2017,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Install Python 3.12 using pyenv in zsh
       shell: |
-        source {{ home_dir }}/.zshrc
+        source {{ zshrc_path }}
         pyenv install -s 3.12
       args:
         executable: /bin/zsh
@@ -2024,7 +2025,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Install Python 3.12 using pyenv in bash
       shell: |
-        source {{ home_dir }}/.bashrc
+        source {{ bashrc_path }}
         pyenv install -s 3.12
       args:
         executable: /bin/bash
@@ -2032,7 +2033,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Create and activate virtual environment in zsh
       shell: |
-        source {{ home_dir }}/.zshrc
+        source {{ zshrc_path }}
         cd {{ home_dir }}/python_inference_layer_server
         pyenv local 3.12
         python -m venv venv
@@ -2047,7 +2048,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Create and activate virtual environment in bash
       shell: |
-        source {{ home_dir }}/.bashrc
+        source {{ bashrc_path }}
         cd {{ home_dir }}/python_inference_layer_server
         pyenv local 3.12
         python -m venv venv
@@ -2071,13 +2072,13 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Check if the application directory exists
       stat:
-        path: ~/python_inference_layer_server
+        path: /home/{{ ubuntu_user }}/python_inference_layer_server
       register: app_dir
 
     - name: Clone the repository if the directory doesn't exist
       git:
         repo: https://github.com/pastelnetwork/python_inference_layer_server
-        dest: ~/python_inference_layer_server
+        dest: /home/{{ ubuntu_user }}/python_inference_layer_server
       when: not app_dir.stat.exists
 
     - name: Run initial setup script if the directory was just created
@@ -2085,16 +2086,16 @@ The complete playbook is shown below, with explanation to follow:
         chmod +x initial_inference_server_setup_script.sh
         ./initial_inference_server_setup_script.sh
       args:
-        chdir: ~/python_inference_layer_server
+        chdir: /home/{{ ubuntu_user }}/python_inference_layer_server
       when: not app_dir.stat.exists
 
     - name: Update code
       shell: |
-        source ~/.{{ profile_file }}
+        source /home/{{ ubuntu_user }}/.{{ profile_file }}
         git stash
         git pull
       args:
-        chdir: ~/python_inference_layer_server
+        chdir: /home/{{ ubuntu_user }}/python_inference_layer_server
         executable: "{{ shell_path }}"
 
     - name: Get the name of the existing tmux session
@@ -2125,8 +2126,8 @@ The complete playbook is shown below, with explanation to follow:
       copy:
         content: |
           #!/bin/{{ 'zsh' if '/zsh' in shell_path else 'bash' }}
-          source ~/.{{ profile_file }}
-          cd ~/python_inference_layer_server
+          source /home/{{ ubuntu_user }}/.{{ profile_file }}
+          cd /home/{{ ubuntu_user }}/python_inference_layer_server
           pyenv local 3.12
           source venv/bin/activate
           python -m pip install --upgrade pip
@@ -2134,18 +2135,18 @@ The complete playbook is shown below, with explanation to follow:
           python -m pip install wheel
           pip install -r requirements.txt
           python main.py
-        dest: ~/run_script.sh
+        dest: /home/{{ ubuntu_user }}/run_script.sh
         mode: '0755'
 
     - name: Launch script in new tmux window
       shell: |
-        tmux new-window -t {{ session_name }}: -n supernode_script -d "{{ shell_path }} -c '~/run_script.sh'"
+        tmux new-window -t {{ session_name }}: -n supernode_script -d "{{ shell_path }} -c '/home/{{ ubuntu_user }}/run_script.sh'"
       args:
         executable: "{{ shell_path }}"
 
     - name: Remove temporary script
       file:
-        path: ~/run_script.sh
+        path: /home/{{ ubuntu_user }}/run_script.sh
         state: absent
 ```
 
