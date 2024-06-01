@@ -1877,47 +1877,335 @@ In summary, the environment variable setup and processing in the Pastel Inferenc
 
 ----------
 
-**Script and** **Ansible Playbook for Deploying Inference Server**
+**Ansible Playbook for Deploying Inference Server**
 
-The Inference Server repo includes an ansible playbook called `[ansible_playbook_to_update_and_start_pastel_inference_layer.yml](https://github.com/pastelnetwork/python_inference_layer_server/blob/master/ansible_playbook_to_update_and_start_pastel_inference_layer.yml)` and a bash script called `[initial_inference_server_setup_script.sh](https://github.com/pastelnetwork/python_inference_layer_server/blob/master/initial_inference_server_setup_script.sh)` that largely automate the process of deploying the system on a fresh machine, or updating a configured inference server Supernode when the inference code is updated. 
+The Inference Server repo includes an ansible playbook called [pastel_inference_layer_deployment_playbook.yml](https://github.com/pastelnetwork/python_inference_layer_server/blob/master/pastel_inference_layer_deployment_playbook.yml) that largely automates the process of deploying the system on a fresh machine, or updating a configured inference server Supernode when the inference code is updated. 
 
-The `initial_inference_server_setup_script.sh` is a bash script that automates the process of setting up the Pastel Inference Layer server on a new machine or updating an existing deployment. The script performs the following tasks:
+The complete playbook is shown below, with explanation to follow:
 
+```YAML
+---
+- name: Pastel Inference Layer Deployment
+  hosts: all
+  become: yes
+  vars:
+    ubuntu_user: ubuntu
+    oh_my_zsh_install_script: "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+    rust_install_script: "https://sh.rustup.rs"
+    atuin_install_script: "https://setup.atuin.sh"
+    zshrc_path: "/home/{{ ubuntu_user }}/.zshrc"
+    oh_my_zsh_install_flag: "/home/{{ ubuntu_user }}/.oh-my-zsh"
+    home_dir: "/home/{{ ubuntu_user }}"
+    
+  tasks:
+    - name: Update and upgrade apt packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
 
-1. Determines the user's shell (zsh or bash) and sets the appropriate profile file and shell command.
-2. Checks if the `python_inference_layer_server` directory exists in the user's home directory.
-    - If the directory exists, it stashes any local changes and pulls the latest code from the GitHub repository.
-    - If the directory doesn't exist, it clones the repository into the user's home directory.
-3. Retrieves the name of the existing tmux session or creates a new session if none exists.
-4. Checks if a tmux window named `supernode_script` already exists in the tmux session.
-    - If the window exists, it kills the window to ensure a clean start.
-    - If the window doesn't exist, it proceeds to create a new one.
-5. Creates a temporary script file (`run_script.sh`) in the user's home directory. This script contains the necessary commands to set up the Python environment and run the Inference Server.
-6. Launches the temporary script in a new tmux window named `supernode_script` using the appropriate shell.
+    - name: Check if Oh My Zsh is installed
+      stat:
+        path: "{{ oh_my_zsh_install_flag }}"
+      register: oh_my_zsh_installed
 
-The script ensures that the latest code is fetched from the repository, sets up the necessary Python environment using `pyenv` and `venv`, installs the required dependencies, and starts the Inference Server in a dedicated tmux window. By using tmux, the script allows the Inference Server to run in the background, even if the SSH session is disconnected.
+    - name: Install Oh My Zsh
+      become_user: "{{ ubuntu_user }}"
+      shell: >
+        sh -c "$(curl -fsSL {{ oh_my_zsh_install_script }})" && touch {{ oh_my_zsh_install_flag }}
+      when: not oh_my_zsh_installed.stat.exists
 
-The `ansible_playbook_to_update_and_start_pastel_inference_layer.yml` is an Ansible playbook that automates the process of updating the code and running the Python script in a tmux session on remote hosts. The playbook performs the following tasks:
+    - name: Install Rust
+      become_user: "{{ ubuntu_user }}"
+      shell: >
+        curl -fsSL {{ rust_install_script }} | sh -s -- -y
 
+    - name: Ensure Rust environment is loaded
+      lineinfile:
+        path: "{{ zshrc_path }}"
+        regexp: 'source $HOME/.cargo/env'
+        line: 'source $HOME/.cargo/env'
+        state: present
+      become_user: "{{ ubuntu_user }}"
 
-1. Determines the user's shell (zsh or bash) and sets the appropriate shell path and profile file.
-2. Updates the code in the `python_inference_layer_server` directory by stashing any local changes and pulling the latest code from the repository.
-3. Retrieves the name of the existing tmux session or creates a new session if none exists.
-4. Checks if a tmux window named `supernode_script` already exists in the tmux session.
-    - If the window exists, it kills the window to ensure a clean start.
-    - If the window doesn't exist, it proceeds to create a new one.
-5. Creates a temporary script file (`run_script.sh`) on the remote host. This script contains the necessary commands to set up the Python environment and run the Inference Server.
-6. Launches the temporary script in a new tmux window named `supernode_script` using the appropriate shell.
-7. Removes the temporary script file from the remote host.
+    - name: Install Atuin
+      become_user: "{{ ubuntu_user }}"
+      shell: >
+        /bin/bash -c "$(curl --proto '=https' --tlsv1.2 -sSf {{ atuin_install_script }})"
 
-The Ansible playbook allows for easy deployment and updating of the Inference Server on multiple remote hosts simultaneously. It ensures that the latest code is fetched from the repository, sets up the necessary Python environment, installs the required dependencies, and starts the Inference Server in a dedicated tmux window on each host.
+    - name: Ensure Atuin environment is loaded
+      lineinfile:
+        path: "{{ zshrc_path }}"
+        regexp: 'eval "$(atuin init zsh)"'
+        line: 'eval "$(atuin init zsh)"'
+        state: present
+      become_user: "{{ ubuntu_user }}"
 
-Both the bash script and the Ansible playbook provide a streamlined and automated approach to deploying and updating the Pastel Inference Layer server. They handle the setup of the Python environment, installation of dependencies, and starting of the Inference Server in a tmux session, making the deployment process efficient and reproducible.
+    - name: Install dependencies for pyenv
+      apt:
+        name:
+          - build-essential
+          - libssl-dev
+          - zlib1g-dev
+          - libbz2-dev
+          - libreadline-dev
+          - libsqlite3-dev
+          - wget
+          - curl
+          - llvm
+          - libncurses5-dev
+          - libncursesw5-dev
+          - xz-utils
+          - tk-dev
+          - libffi-dev
+          - liblzma-dev
+          - python3-openssl
+          - git
+        state: present
+        update_cache: yes
 
-The use of tmux in both the script and playbook ensures that the Inference Server runs in the background, even if the SSH session is disconnected. This allows for uninterrupted operation of the Inference Server, as it can continue running even if the user logs out or the connection is lost.
-By automating the deployment process, these scripts and playbooks reduce the chances of human error and ensure consistent and reliable deployments across multiple hosts. They also save time and effort by eliminating the need for manual setup and configuration on each host.
+    - name: Clone pyenv repository
+      git:
+        repo: 'https://github.com/pyenv/pyenv.git'
+        dest: '{{ home_dir }}/.pyenv'
+        update: yes
+        force: yes
 
-Overall, the `initial_inference_server_setup_script.sh` and `ansible_playbook_to_update_and_start_pastel_inference_layer.yml` provide a powerful and efficient way to deploy and manage the Pastel Inference Layer server. They encapsulate the necessary steps and best practices for setting up the server, making it easy for developers and system administrators to deploy and maintain the Inference Server infrastructure.
+    - name: Check if zsh is installed
+      command: which zsh
+      register: zsh_installed
+      ignore_errors: yes
+
+    - name: Set pyenv environment variables in .zshrc if zsh is found
+      blockinfile:
+        path: '{{ home_dir }}/.zshrc'
+        block: |
+          export PYENV_ROOT="$HOME/.pyenv"
+          export PATH="$PYENV_ROOT/bin:$PATH"
+          eval "$(pyenv init --path)"
+      when: zsh_installed.rc == 0
+
+    - name: Set pyenv environment variables in .bashrc if zsh is not found
+      blockinfile:
+        path: '{{ home_dir }}/.bashrc'
+        block: |
+          export PYENV_ROOT="$HOME/.pyenv"
+          export PATH="$PYENV_ROOT/bin:$PATH"
+          eval "$(pyenv init --path)"
+      when: zsh_installed.rc != 0
+
+    - name: Ensure pyenv is initialized in zsh
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        pyenv --version
+      args:
+        executable: /bin/zsh
+      register: pyenv_version_zsh
+      changed_when: "'pyenv' not in pyenv_version_zsh.stdout"
+      when: zsh_installed.rc == 0
+
+    - name: Ensure pyenv is initialized in bash
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        pyenv --version
+      args:
+        executable: /bin/bash
+      register: pyenv_version_bash
+      changed_when: "'pyenv' not in pyenv_version_bash.stdout"
+      when: zsh_installed.rc != 0
+
+    - name: Install Python 3.12 using pyenv in zsh
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        pyenv install -s 3.12
+      args:
+        executable: /bin/zsh
+      when: zsh_installed.rc == 0
+
+    - name: Install Python 3.12 using pyenv in bash
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        pyenv install -s 3.12
+      args:
+        executable: /bin/bash
+      when: zsh_installed.rc != 0
+
+    - name: Create and activate virtual environment in zsh
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        cd {{ home_dir }}/python_inference_layer_server
+        pyenv local 3.12
+        python -m venv venv
+        source venv/bin/activate
+        python -m pip install --upgrade pip
+        python -m pip install wheel
+        python -m pip install --upgrade setuptools wheel
+        pip install -r requirements.txt
+      args:
+        executable: /bin/zsh
+      when: zsh_installed.rc == 0
+
+    - name: Create and activate virtual environment in bash
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        cd {{ home_dir }}/python_inference_layer_server
+        pyenv local 3.12
+        python -m venv venv
+        source venv/bin/activate
+        python -m pip install --upgrade pip
+        python -m pip install wheel
+        python -m pip install --upgrade setuptools wheel
+        pip install -r requirements.txt
+      args:
+        executable: /bin/bash
+      when: zsh_installed.rc != 0
+
+    - name: Determine the user shell
+      shell: echo $SHELL
+      register: user_shell
+
+    - name: Set shell path and profile file
+      set_fact:
+        shell_path: "{{ user_shell.stdout }}"
+        profile_file: "{{ 'zshrc' if '/zsh' in user_shell.stdout else 'bashrc' }}"
+
+    - name: Check if the application directory exists
+      stat:
+        path: ~/python_inference_layer_server
+      register: app_dir
+
+    - name: Clone the repository if the directory doesn't exist
+      git:
+        repo: https://github.com/pastelnetwork/python_inference_layer_server
+        dest: ~/python_inference_layer_server
+      when: not app_dir.stat.exists
+
+    - name: Run initial setup script if the directory was just created
+      shell: |
+        chmod +x initial_inference_server_setup_script.sh
+        ./initial_inference_server_setup_script.sh
+      args:
+        chdir: ~/python_inference_layer_server
+      when: not app_dir.stat.exists
+
+    - name: Update code
+      shell: |
+        source ~/.{{ profile_file }}
+        git stash
+        git pull
+      args:
+        chdir: ~/python_inference_layer_server
+        executable: "{{ shell_path }}"
+
+    - name: Get the name of the existing tmux session
+      shell: tmux list-sessions -F '#{session_name}' | head -1
+      register: tmux_session_name
+      ignore_errors: true
+
+    - name: Create tmux session if it doesn't exist
+      shell: tmux new-session -d -s default_session
+      when: tmux_session_name.stdout == ""
+      args:
+        executable: "{{ shell_path }}"
+
+    - name: Set the tmux session name
+      set_fact:
+        session_name: "{{ tmux_session_name.stdout if tmux_session_name.stdout else 'default_session' }}"
+
+    - name: Check if supernode_script window exists
+      shell: tmux list-windows -t {{ session_name }} -F '#{window_name}' | grep -q '^supernode_script$'
+      register: window_exists
+      ignore_errors: true
+
+    - name: Kill supernode_script window if it exists
+      shell: tmux kill-window -t {{ session_name }}:supernode_script
+      when: window_exists.rc == 0
+
+    - name: Create temporary script
+      copy:
+        content: |
+          #!/bin/{{ 'zsh' if '/zsh' in shell_path else 'bash' }}
+          source ~/.{{ profile_file }}
+          cd ~/python_inference_layer_server
+          pyenv local 3.12
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade setuptools
+          python -m pip install wheel
+          pip install -r requirements.txt
+          python main.py
+        dest: ~/run_script.sh
+        mode: '0755'
+
+    - name: Launch script in new tmux window
+      shell: |
+        tmux new-window -t {{ session_name }}: -n supernode_script -d "{{ shell_path }} -c '~/run_script.sh'"
+      args:
+        executable: "{{ shell_path }}"
+
+    - name: Remove temporary script
+      file:
+        path: ~/run_script.sh
+        state: absent
+```
+
+**Detailed Breakdown of the Ansible Playbook for the Pastel Inference Layer Deployment:**
+
+The Ansible playbook above is designed to automate the deployment of the Pastel Inference Layer on a server. It performs various tasks to prepare the environment, install necessary software, and set up the application for running within a `tmux` session. Below is a comprehensive breakdown of each step:
+
+#### Initial Setup and Package Management
+The playbook begins by updating the package lists and upgrading the installed packages. This ensures that the system is up to date with the latest security patches and software versions. The `autoremove` option cleans up unnecessary packages, keeping the system lean.
+
+#### Checking and Installing Oh My Zsh
+The playbook then checks if Oh My Zsh is already installed by looking for a specific file. If it is not installed, it uses a shell script to install Oh My Zsh, which provides an enhanced shell experience.
+
+#### Installing Rust
+Rust is installed next using a provided script. Rust is essential for compiling certain dependencies and tools that may be required by the Pastel Inference Layer.
+
+#### Configuring Shell Environments
+The playbook ensures that the Rust environment variables are loaded by adding them to the `.zshrc` file. This allows the user to use Rust tools seamlessly.
+
+#### Installing Atuin
+Atuin, a tool for enhancing shell history, is installed. The playbook adds the necessary initialization commands to `.zshrc` to ensure it is available in the shell.
+
+#### Setting Up pyenv and Python
+The playbook installs dependencies required for building Python from source and then clones the `pyenv` repository. `pyenv` allows for easy management of multiple Python versions.
+
+Depending on whether `zsh` or `bash` is the default shell, it adds `pyenv` initialization commands to either `.zshrc` or `.bashrc`. This ensures `pyenv` is set up correctly regardless of the shell in use.
+
+#### Ensuring pyenv Initialization
+The playbook runs commands to initialize `pyenv` in the respective shell and checks if `pyenv` is correctly installed by verifying its version. This step ensures that the environment is correctly set up for Python version management.
+
+#### Installing Python 3.12 and Setting Up Virtual Environment
+The playbook installs Python 3.12 using `pyenv`. It then creates and activates a virtual environment within the project directory. This isolated environment ensures that dependencies for the Pastel Inference Layer do not interfere with other Python projects on the system.
+
+#### Cloning the Application Repository
+The playbook checks if the application directory exists. If it does not, it clones the repository from GitHub and runs an initial setup script. This script likely sets up necessary configurations and dependencies specific to the Pastel Inference Layer.
+
+#### Updating the Application Code
+If the repository already exists, the playbook stashes any local changes and pulls the latest code from the repository. This ensures the application is up to date with the latest changes.
+
+#### Setting Up and Managing tmux Session
+The playbook uses `tmux` to create a new session or attach to an existing one. This allows the application to run in the background, even if the SSH session is disconnected.
+
+It checks if a specific `tmux` window for running the application exists. If it does, it kills the window to prevent multiple instances from running. It then creates a new window within the `tmux` session to run the application.
+
+A temporary script is created and executed within the `tmux` window to start the application. This script sets up the environment, activates the virtual environment, installs any missing dependencies, and starts the application.
+
+#### Cleaning Up
+After launching the application, the playbook removes the temporary script to keep the system clean.
 
 ----------
 
