@@ -1996,9 +1996,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Ensure pyenv is initialized in zsh
       shell: |
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init --path)"
+        source {{ home_dir }}/.zshrc
         pyenv --version
       args:
         executable: /bin/zsh
@@ -2008,9 +2006,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Ensure pyenv is initialized in bash
       shell: |
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init --path)"
+        source {{ home_dir }}/.bashrc
         pyenv --version
       args:
         executable: /bin/bash
@@ -2020,9 +2016,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Install Python 3.12 using pyenv in zsh
       shell: |
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init --path)"
+        source {{ home_dir }}/.zshrc
         pyenv install -s 3.12
       args:
         executable: /bin/zsh
@@ -2030,9 +2024,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Install Python 3.12 using pyenv in bash
       shell: |
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init --path)"
+        source {{ home_dir }}/.bashrc
         pyenv install -s 3.12
       args:
         executable: /bin/bash
@@ -2040,9 +2032,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Create and activate virtual environment in zsh
       shell: |
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init --path)"
+        source {{ home_dir }}/.zshrc
         cd {{ home_dir }}/python_inference_layer_server
         pyenv local 3.12
         python -m venv venv
@@ -2057,9 +2047,7 @@ The complete playbook is shown below, with explanation to follow:
 
     - name: Create and activate virtual environment in bash
       shell: |
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init --path)"
+        source {{ home_dir }}/.bashrc
         cd {{ home_dir }}/python_inference_layer_server
         pyenv local 3.12
         python -m venv venv
@@ -2169,10 +2157,10 @@ The Ansible playbook above is designed to automate the deployment of the Pastel 
 The playbook begins by updating the package lists and upgrading the installed packages. This ensures that the system is up to date with the latest security patches and software versions. The `autoremove` option cleans up unnecessary packages, keeping the system lean.
 
 #### Checking and Installing Oh My Zsh
-The playbook then checks if Oh My Zsh is already installed by looking for a specific file. If it is not installed, it uses a shell script to install Oh My Zsh, which provides an enhanced shell experience.
+The playbook checks if Oh My Zsh is already installed by looking for a specific file. If it is not installed, it uses a shell script to install Oh My Zsh, which provides an enhanced shell experience.
 
 #### Installing Rust
-Rust is installed next using a provided script. Rust is essential for compiling certain dependencies and tools that may be required by the Pastel Inference Layer.
+Rust is installed using a provided script. Rust is essential for compiling certain dependencies and tools that may be required by the Pastel Inference Layer.
 
 #### Configuring Shell Environments
 The playbook ensures that the Rust environment variables are loaded by adding them to the `.zshrc` file. This allows the user to use Rust tools seamlessly.
